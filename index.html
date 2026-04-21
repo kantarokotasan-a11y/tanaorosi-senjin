@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="棚卸">
+<meta name="theme-color" content="#1D9E75">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>棚卸アプリ</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{
+  font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","Hiragino Sans","Yu Gothic","Meiryo",sans-serif;
+  background:#F7F5F0;
+  color:#1a1a1a;
+  min-height:100vh;
+  min-height:100dvh;
+  overscroll-behavior:none;
+}
+:root{
+  --cp:#1D9E75;--cpl:#E1F5EE;--cpd:#0F6E56;
+  --ca:#185FA5;--cal:#E6F1FB;--cad:#0C447C;
+  --cd:#E24B4A;
+  --bg:#F7F5F0;--surf:#FFFFFF;--surf2:#EFEDE7;
+  --txt:#1a1a1a;--txt2:#666;--txt3:#999;
+  --border:rgba(0,0,0,0.12);
+  --border2:rgba(0,0,0,0.2);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#1a1a1a;--surf:#2a2a2a;--surf2:#333;
+    --txt:#f0f0f0;--txt2:#aaa;--txt3:#777;
+    --border:rgba(255,255,255,0.15);
+    --border2:rgba(255,255,255,0.25);
+  }
+  html,body{background:var(--bg);color:var(--txt);}
+}
+.app{max-width:480px;margin:0 auto;padding:env(safe-area-inset-top) 0 calc(80px + env(safe-area-inset-bottom));min-height:100vh;min-height:100dvh;}
+.hidden{display:none!important;}
+
+#sc-login{padding:32px 16px 24px;}
+.logo-wrap{text-align:center;margin-bottom:24px;}
+.logo-mark{width:64px;height:64px;border-radius:16px;background:var(--cp);margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:30px;color:white;}
+.logo-wrap h1{font-size:22px;font-weight:600;color:var(--txt);}
+.logo-wrap p{font-size:13px;color:var(--txt2);margin-top:4px;}
+.sec-label{font-size:12px;font-weight:500;color:var(--txt2);letter-spacing:.05em;margin:18px 16px 8px;}
+.sel-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:0 16px;margin-bottom:4px;}
+.sel-btn{padding:14px 8px;border-radius:10px;border:1.5px solid var(--border);background:var(--surf);color:var(--txt);font-size:14px;font-weight:500;cursor:pointer;text-align:center;transition:all .15s;}
+.sel-btn:active{transform:scale(0.98);}
+.sel-btn.s-store.selected{border-color:var(--cp);background:var(--cpl);color:var(--cpd);}
+@media (prefers-color-scheme:dark){.sel-btn.s-store.selected{background:rgba(29,158,117,0.2);color:#9FE1CB;}}
+.btn-start{width:calc(100% - 32px);margin:20px 16px 0;padding:15px;background:var(--cp);color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;opacity:.35;pointer-events:none;transition:opacity .2s;}
+.btn-start.on{opacity:1;pointer-events:auto;}
+.btn-start:active{transform:scale(0.98);}
+.login-date{text-align:center;font-size:12px;color:var(--txt2);margin-top:12px;}
+
+.hdr{background:var(--cp);padding:14px 16px 12px;margin-bottom:12px;position:sticky;top:0;top:env(safe-area-inset-top);z-index:10;}
+.hdr-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.hdr-top h1{font-size:17px;font-weight:600;color:white;}
+.hdr-chg{font-size:12px;color:rgba(255,255,255,.9);background:rgba(255,255,255,0.15);border:none;cursor:pointer;padding:5px 10px;border-radius:6px;}
+.hdr-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.tag{font-size:11px;padding:3px 10px;border-radius:99px;}
+.tag-s{background:rgba(255,255,255,.28);color:white;}
+.tag-t{background:rgba(255,255,255,.15);color:rgba(255,255,255,.95);border:1px solid rgba(255,255,255,.3);}
+.hdr-stats{display:flex;gap:16px;}
+.stat .num{font-size:22px;font-weight:600;color:white;}
+.stat .lbl{font-size:11px;color:rgba(255,255,255,.8);margin-top:2px;}
+
+.panel{display:none;padding:0 16px;}
+.panel.active{display:block;}
+
+.tonya-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px;}
+.tonya-card{padding:16px 10px;border-radius:12px;border:1.5px solid var(--border);background:var(--surf);cursor:pointer;text-align:center;transition:all .15s;}
+.tonya-card:active{transform:scale(0.97);}
+.tonya-card.has-items{border-color:var(--ca);background:var(--cal);}
+.tonya-card.has-items .tc-name{color:var(--cad);}
+@media (prefers-color-scheme:dark){.tonya-card.has-items{background:rgba(24,95,165,0.2);} .tonya-card.has-items .tc-name{color:#B5D4F4;}}
+.tonya-card .tc-name{font-size:15px;font-weight:600;color:var(--txt);}
+.tonya-card .tc-count{font-size:11px;color:var(--txt2);margin-top:4px;}
+.tonya-card.has-items .tc-count{color:var(--cad);}
+@media (prefers-color-scheme:dark){.tonya-card.has-items .tc-count{color:#85B7EB;}}
+
+.tonya-detail-hdr{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-top:4px;}
+.back-btn{padding:8px 12px;border:1px solid var(--border2);border-radius:8px;background:var(--surf);color:var(--txt);font-size:13px;cursor:pointer;}
+.tonya-detail-hdr h2{font-size:17px;font-weight:600;color:var(--txt);}
+
+.add-form{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;}
+.add-form h3{font-size:14px;font-weight:600;margin-bottom:12px;color:var(--txt);}
+.form-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;}
+.form-row:last-child{margin-bottom:0;}
+.form-lbl{font-size:13px;color:var(--txt2);width:80px;flex-shrink:0;}
+.form-row input{flex:1;font-size:16px;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;background:var(--bg);color:var(--txt);-webkit-appearance:none;}
+.btn-add-item{width:100%;padding:12px;background:var(--cp);color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;}
+.btn-add-item:active{opacity:0.85;}
+
+.inv-list{display:flex;flex-direction:column;gap:8px;}
+.inv-item{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+.inv-item-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px;}
+.inv-name{font-size:14px;font-weight:600;color:var(--txt);line-height:1.35;}
+.inv-price{font-size:12px;color:var(--txt2);margin-top:3px;}
+.qty-row{display:flex;justify-content:space-between;align-items:center;}
+.qty-ctrl{display:flex;align-items:center;gap:8px;}
+.qty-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--border2);background:var(--bg);color:var(--txt);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:600;}
+.qty-btn:active{background:var(--surf2);}
+.qty-input{width:66px;padding:7px 8px;font-size:16px;font-weight:600;text-align:center;border:1px solid var(--border2);border-radius:8px;background:var(--bg);color:var(--txt);-webkit-appearance:none;}
+.inv-total{font-size:13px;color:var(--txt2);font-weight:500;}
+.del-btn{font-size:12px;color:var(--cd);background:none;border:none;cursor:pointer;padding:4px 6px;}
+
+.exp-card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;}
+.exp-card h3{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--txt);}
+.exp-card p{font-size:13px;color:var(--txt2);margin-bottom:14px;}
+.btn-exp{width:100%;padding:13px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;}
+.btn-csv{background:#085041;color:#9FE1CB;}
+.btn-xls{background:#3B6D11;color:#C0DD97;}
+.btn-prt{background:var(--bg);color:var(--txt);border:1px solid var(--border2);}
+
+.bnav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--surf);border-top:1px solid var(--border);padding:8px 0 calc(12px + env(safe-area-inset-bottom));max-width:480px;margin:0 auto;z-index:20;}
+.nbtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;padding:6px;color:var(--txt2);}
+.nbtn .ni{font-size:22px;}
+.nbtn .nl{font-size:11px;}
+.nbtn.active{color:var(--cp);}
+.nbtn.active .nl{font-weight:600;}
+
+.tab-bar{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:0 16px 14px;background:var(--surf);}
+.tab{flex:1;padding:10px 4px;font-size:13px;text-align:center;background:transparent;color:var(--txt2);cursor:pointer;border:none;font-weight:500;}
+.tab.active{background:var(--cp);color:white;font-weight:600;}
+
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#1D9E75;color:white;padding:10px 20px;border-radius:99px;font-size:13px;font-weight:500;opacity:0;transition:opacity .2s;pointer-events:none;z-index:999;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.2);}
+.toast.show{opacity:1;}
+.empty{text-align:center;padding:40px 16px;color:var(--txt2);font-size:13px;line-height:1.7;}
+
+.install-hint{background:var(--cal);border-radius:8px;padding:10px 12px;margin:0 16px 12px;font-size:12px;color:var(--cad);line-height:1.5;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+@media (prefers-color-scheme:dark){.install-hint{background:rgba(24,95,165,0.2);color:#B5D4F4;}}
+.install-hint .close{background:none;border:none;color:inherit;cursor:pointer;font-size:18px;padding:0 4px;}
+</style>
+</head>
+<body>
+
+<div id="sc-login" class="app">
+  <div class="logo-wrap">
+    <div class="logo-mark">⊞</div>
+    <h1>棚卸アプリ</h1>
+    <p>店舗を選択してください</p>
+  </div>
+  <div id="install-hint" class="install-hint hidden">
+    <span>💡 ホーム画面に追加するとアプリのように使えます</span>
+    <button class="close" onclick="document.getElementById('install-hint').classList.add('hidden');localStorage.setItem('hideHint','1');">×</button>
+  </div>
+  <p class="sec-label">店舗</p>
+  <div class="sel-grid">
+    <button class="sel-btn s-store" onclick="selStore(this,'加世田店')">加世田店</button>
+    <button class="sel-btn s-store" onclick="selStore(this,'川内店')">川内店</button>
+    <button class="sel-btn s-store" onclick="selStore(this,'上荒田店')">上荒田店</button>
+    <button class="sel-btn s-store" onclick="selStore(this,'串木野店')">串木野店</button>
+    <button class="sel-btn s-store" onclick="selStore(this,'鹿屋店')">鹿屋店</button>
+    <button class="sel-btn s-store" onclick="selStore(this,'徳之島店')">徳之島店</button>
+    <button class="sel-btn s-store" onclick="selStore(this,'マルヤ店')">マルヤ店</button>
+    <button class="sel-btn s-store" onclick="selStore(this,'G鹿屋店')">G鹿屋店</button>
+    <button class="sel-btn s-store" onclick="selStore(this,'姶良店')">姶良店</button>
+    <button class="sel-btn s-store" onclick="selStore(this,'真砂店')">真砂店</button>
+  </div>
+  <button class="btn-start" id="btn-start" onclick="startApp()">棚卸を開始 →</button>
+  <p class="login-date" id="login-date"></p>
+</div>
+
+<div id="sc-app" class="hidden">
+  <div class="app">
+    <div class="hdr">
+      <div class="hdr-top">
+        <h1>棚卸アプリ</h1>
+        <button class="hdr-chg" onclick="goLogin()">← 店舗変更</button>
+      </div>
+      <div class="hdr-tags">
+        <span class="tag tag-s" id="hdr-store"></span>
+        <span class="tag tag-t" id="hdr-tonya" style="display:none;"></span>
+      </div>
+      <div class="hdr-stats">
+        <div class="stat"><div class="num" id="stat-total">0</div><div class="lbl">登録商品数</div></div>
+        <div class="stat"><div class="num" id="stat-qty">0</div><div class="lbl">合計数量</div></div>
+        <div class="stat"><div class="num" id="stat-cats">0</div><div class="lbl">稼動問屋</div></div>
+      </div>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab active" onclick="showTab('tonya')">問屋</button>
+      <button class="tab" onclick="showTab('export')">エクスポート</button>
+    </div>
+
+    <div class="panel active" id="panel-tonya">
+      <div id="view-tonya-list">
+        <div class="tonya-grid" id="tonya-grid"></div>
+      </div>
+      <div id="view-tonya-detail" class="hidden">
+        <div class="tonya-detail-hdr">
+          <button class="back-btn" onclick="backToList()">← 戻る</button>
+          <h2 id="detail-title"></h2>
+        </div>
+
+        <div class="add-form">
+          <h3>商品を追加</h3>
+          <div class="form-row"><span class="form-lbl">商品名</span><input type="text" id="add-name" placeholder="商品名"></div>
+          <div class="form-row"><span class="form-lbl">原単価(円)</span><input type="number" id="add-price" placeholder="0" min="0" inputmode="numeric"></div>
+          <button class="btn-add-item" onclick="addMasterItem()">＋ 追加</button>
+        </div>
+
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <span style="font-size:14px;font-weight:600;color:var(--txt);" id="inv-list-title">商品一覧</span>
+            <span style="font-size:12px;color:var(--txt2);" id="inv-count"></span>
+          </div>
+          <div class="inv-list" id="inv-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-export">
+      <div class="exp-card">
+        <h3>棚卸データをエクスポート</h3>
+        <p id="exp-summary"></p>
+        <button class="btn-exp btn-csv" onclick="exportCSV()">CSVでエクスポート (.csv)</button>
+        <button class="btn-exp btn-xls" onclick="exportXLS()">Excelでエクスポート (.xls)</button>
+        <button class="btn-exp btn-prt" onclick="printAll()">印刷用に表示</button>
+      </div>
+      <div class="exp-card">
+        <h3 style="margin-bottom:10px;">問屋別サマリー</h3>
+        <div id="exp-summary-tbl" style="font-size:13px;"></div>
+      </div>
+    </div>
+
+    <div class="bnav">
+      <button class="nbtn active" id="nav-tonya" onclick="showTab('tonya')"><span class="ni">⊟</span><span class="nl">問屋</span></button>
+      <button class="nbtn" id="nav-export" onclick="showTab('export')"><span class="ni">↑</span><span class="nl">エクスポート</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const TONYAS=['マリンフーズ','南給','あじかん','イケワキ','セイカ','中央包装','山崎','キンコー醤油','日本食研','ダイショー'];
+const STORAGE_KEY='inventory_app_v1';
+
+const DEFAULT_SEED={
+  'セイカ':[
+    {name:'サクサクエビフライ 10尾',price:26500},
+    {name:'WFN 白身フライ 7枚',price:21000},
+    {name:'MN まるごと海老フライ 18尾',price:37000}
+  ],
+  'イケワキ':[
+    {name:'木研 いか串',price:980},
+    {name:'JTSアース カツドウカス 10本',price:100},
+    {name:'イケワキ 味の花/佃素 30g(中国産)',price:265},
+    {name:'カツオ味 60g(鹿児島加工)',price:2135},
+    {name:'マルゲン昆布ちりめん',price:4850},
+    {name:'リケアース昆布塩サベアーL バラ/1kg',price:5800},
+    {name:'45枚(国産)',price:329}
+  ],
+  '中央包装':[
+    {name:'W-PHマット 白 65×160',price:190},
+    {name:'鮮陣様無地サーマルラベル 40×23',price:1190},
+    {name:'寺岡純正ライナーレスラベル 強粘',price:4310},
+    {name:'寺岡DP用無地ラベル 59×280m',price:990},
+    {name:'シール天然 M-520 950枚巻(金ホイル)',price:540},
+    {name:'シール生食用 M-139 A',price:510},
+    {name:'シール骨とり魚 LH-889S ARC',price:600},
+    {name:'シール脂がのってます LH-47 5S ARC',price:630},
+    {name:'FLBユニコーA15-30 (V1)',price:540},
+    {name:'FLBユニコーY10-25 (V)',price:462},
+    {name:'FLBユニコーY13-30 W',price:660},
+    {name:'FLBユニコーY18-33 W',price:866},
+    {name:'FLBユニコーK10-25 W',price:580},
+    {name:'FLBユニコーK13-25 W',price:857},
+    {name:'バイオPET AC-25-14F',price:1287},
+    {name:'食品離型油 リケイ君 480ml',price:800}
+  ]
+};
+
+let curStore='', curTonya='';
+let master={}, invData={};
+
+function loadData(){
+  const saved=localStorage.getItem(STORAGE_KEY);
+  if(saved){
+    try{
+      const parsed=JSON.parse(saved);
+      master=parsed.master||{};
+      invData=parsed.invData||{};
+      TONYAS.forEach(t=>{
+        if(!master[t])master[t]=[];
+        if(!invData[t])invData[t]=[];
+      });
+      return;
+    }catch(e){console.error(e);}
+  }
+  TONYAS.forEach(t=>{master[t]=[];invData[t]=[];});
+  Object.entries(DEFAULT_SEED).forEach(([tonya,items])=>{
+    items.forEach((item,i)=>{
+      const id=Date.now()+Math.random()*1000+i;
+      master[tonya].push({id,name:item.name,price:item.price});
+      invData[tonya].push({id,name:item.name,price:item.price,qty:0});
+    });
+  });
+  saveData();
+}
+
+function saveData(){
+  try{
+    localStorage.setItem(STORAGE_KEY,JSON.stringify({master,invData}));
+  }catch(e){console.error('保存失敗',e);}
+}
+
+function today(){const d=new Date();return d.getFullYear()+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0');}
+
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2200);}
+
+function selStore(btn,name){
+  document.querySelectorAll('.s-store').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected'); curStore=name;
+  const bs=document.getElementById('btn-start');
+  bs.textContent=`${name}で棚卸を開始 →`; bs.classList.add('on');
+}
+
+function startApp(){
+  if(!curStore)return;
+  localStorage.setItem('lastStore',curStore);
+  document.getElementById('sc-login').classList.add('hidden');
+  document.getElementById('sc-app').classList.remove('hidden');
+  document.getElementById('hdr-store').textContent=curStore;
+  document.getElementById('hdr-tonya').style.display='none';
+  renderTonyaGrid(); updateStats();
+}
+
+function goLogin(){
+  document.getElementById('sc-login').classList.remove('hidden');
+  document.getElementById('sc-app').classList.add('hidden');
+  window.scrollTo(0,0);
+}
+
+function renderTonyaGrid(){
+  const grid=document.getElementById('tonya-grid');
+  grid.innerHTML=TONYAS.map(t=>{
+    const cnt=(master[t]||[]).length;
+    const qty=(invData[t]||[]).reduce((s,i)=>s+i.qty,0);
+    const cls=cnt>0?'tonya-card has-items':'tonya-card';
+    return `<div class="${cls}" onclick="openTonya('${t}')">
+      <div class="tc-name">${t}</div>
+      <div class="tc-count">${cnt?cnt+'品目 / 計'+qty+'個':'商品なし'}</div>
+    </div>`;
+  }).join('');
+}
+
+function openTonya(name){
+  curTonya=name;
+  document.getElementById('view-tonya-list').classList.add('hidden');
+  document.getElementById('view-tonya-detail').classList.remove('hidden');
+  document.getElementById('detail-title').textContent=name;
+  document.getElementById('hdr-tonya').textContent=name;
+  document.getElementById('hdr-tonya').style.display='';
+  renderInvList();
+  window.scrollTo(0,0);
+}
+
+function backToList(){
+  document.getElementById('view-tonya-list').classList.remove('hidden');
+  document.getElementById('view-tonya-detail').classList.add('hidden');
+  document.getElementById('hdr-tonya').style.display='none';
+  curTonya=''; renderTonyaGrid(); updateStats();
+  window.scrollTo(0,0);
+}
+
+function addMasterItem(){
+  const name=document.getElementById('add-name').value.trim();
+  const price=parseInt(document.getElementById('add-price').value)||0;
+  if(!name){toast('商品名を入力してください');return;}
+  if(master[curTonya].find(m=>m.name===name)){toast('既に登録されています');return;}
+  const id=Date.now()+Math.random();
+  master[curTonya].push({id,name,price});
+  invData[curTonya].push({id,name,price,qty:0});
+  document.getElementById('add-name').value='';
+  document.getElementById('add-price').value='';
+  saveData();
+  toast('追加しました: '+name);
+  renderInvList(); updateStats();
+}
+
+function setQty(id,val){
+  const item=invData[curTonya].find(i=>i.id===id);
+  if(item)item.qty=Math.max(0,parseInt(val)||0);
+  saveData(); updateStats();
+  const tot=document.getElementById('tot-'+id);
+  if(tot&&item)tot.textContent=item.price?'¥'+(item.price*item.qty).toLocaleString():'';
+}
+
+function changeQty(id,delta){
+  const item=invData[curTonya].find(i=>i.id===id);
+  if(item){
+    item.qty=Math.max(0,item.qty+delta);
+    const inp=document.getElementById('qi-'+id);
+    if(inp)inp.value=item.qty;
+    const tot=document.getElementById('tot-'+id);
+    if(tot)tot.textContent=item.price?'¥'+(item.price*item.qty).toLocaleString():'';
+    saveData(); updateStats();
+  }
+}
+
+function delItem(id){
+  if(!confirm('この商品を削除しますか？'))return;
+  master[curTonya]=master[curTonya].filter(i=>i.id!==id);
+  invData[curTonya]=invData[curTonya].filter(i=>i.id!==id);
+  saveData();
+  renderInvList(); updateStats();
+}
+
+function renderInvList(){
+  const items=invData[curTonya]||[];
+  const el=document.getElementById('inv-list');
+  document.getElementById('inv-list-title').textContent=curTonya+'の商品一覧';
+  document.getElementById('inv-count').textContent=items.length+'品目';
+  if(!items.length){el.innerHTML='<div class="empty">商品がまだありません<br>上のフォームから追加してください</div>';return;}
+  el.innerHTML=items.map(i=>`
+    <div class="inv-item">
+      <div class="inv-item-top">
+        <div style="flex:1;min-width:0;">
+          <div class="inv-name">${escapeHtml(i.name)}</div>
+          <div class="inv-price">${i.price?'原単価 ¥'+i.price.toLocaleString():'単価未設定'}</div>
+        </div>
+        <button class="del-btn" onclick="delItem(${i.id})">削除</button>
+      </div>
+      <div class="qty-row">
+        <div class="qty-ctrl">
+          <button class="qty-btn" onclick="changeQty(${i.id},-1)">−</button>
+          <input class="qty-input" id="qi-${i.id}" type="number" min="0" inputmode="numeric" value="${i.qty}" onchange="setQty(${i.id},this.value)">
+          <button class="qty-btn" onclick="changeQty(${i.id},+1)">＋</button>
+        </div>
+        <span class="inv-total" id="tot-${i.id}">${i.price&&i.qty?'¥'+(i.price*i.qty).toLocaleString():''}</span>
+      </div>
+    </div>`).join('');
+}
+
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function updateStats(){
+  const allItems=Object.values(invData).flat();
+  document.getElementById('stat-total').textContent=allItems.length;
+  document.getElementById('stat-qty').textContent=allItems.reduce((s,i)=>s+i.qty,0);
+  document.getElementById('stat-cats').textContent=TONYAS.filter(t=>(invData[t]||[]).some(i=>i.qty>0)).length;
+}
+
+function showTab(t){
+  ['tonya','export'].forEach((x,i)=>{
+    document.getElementById('panel-'+x).classList.toggle('active',x===t);
+    document.getElementById('nav-'+x).classList.toggle('active',x===t);
+    document.querySelectorAll('.tab')[i].classList.toggle('active',x===t);
+  });
+  if(t==='export')renderExport();
+  window.scrollTo(0,0);
+}
+
+function allRows(){return Object.entries(invData).flatMap(([t,items])=>items.map(i=>({...i,tonya:t})));}
+
+function renderExport(){
+  const all=allRows();
+  document.getElementById('exp-summary').textContent=`${curStore} — 全${all.length}品目`;
+  const rows=TONYAS.filter(t=>(invData[t]||[]).length>0).map(t=>{
+    const items=invData[t];
+    const qty=items.reduce((s,i)=>s+i.qty,0);
+    const val=items.reduce((s,i)=>s+(i.price*i.qty),0);
+    return `<tr><td style="padding:6px 0;color:var(--txt2);">${t}</td><td style="text-align:right;padding:6px 0;">${items.length}品目</td><td style="text-align:right;padding:6px 0;">${qty}個</td><td style="text-align:right;padding:6px 0;">¥${val.toLocaleString()}</td></tr>`;
+  }).join('');
+  document.getElementById('exp-summary-tbl').innerHTML=rows?`<table style="width:100%;font-size:12px;border-collapse:collapse;"><tr style="font-size:11px;color:var(--txt2);border-bottom:1px solid var(--border);"><td>問屋</td><td style="text-align:right">品目</td><td style="text-align:right">数量</td><td style="text-align:right">金額</td></tr>${rows}</table>`:'<p style="font-size:12px;color:var(--txt2);">データがありません</p>';
+}
+
+function fname(ext){return `棚卸_${curStore}_${today().replace(/\//g,'')}.${ext}`;}
+
+function exportCSV(){
+  const rows=allRows();
+  if(!rows.length){toast('データがありません');return;}
+  const hdr=`店舗名,${curStore}\n棚卸日,${today()}\n\n問屋,商品名,原単価,数量,合計金額\n`;
+  const body=rows.map(i=>`"${i.tonya}","${i.name}",${i.price},${i.qty},${i.price*i.qty}`).join('\n');
+  const blob=new Blob(['\uFEFF'+hdr+body],{type:'text/csv;charset=utf-8'});
+  downloadBlob(blob,fname('csv'));
+  toast('CSVをダウンロードしました');
+}
+
+function exportXLS(){
+  const rows=allRows();
+  if(!rows.length){toast('データがありません');return;}
+  const hdr=`店舗名\t${curStore}\n棚卸日\t${today()}\n\n問屋\t商品名\t原単価\t数量\t合計金額\n`;
+  const body=rows.map(i=>`${i.tonya}\t${i.name}\t${i.price}\t${i.qty}\t${i.price*i.qty}`).join('\n');
+  const blob=new Blob(['\uFEFF'+hdr+body],{type:'application/vnd.ms-excel;charset=utf-8'});
+  downloadBlob(blob,fname('xls'));
+  toast('Excelファイルをダウンロードしました');
+}
+
+function downloadBlob(blob,filename){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function printAll(){
+  const rows=allRows();
+  if(!rows.length){toast('データがありません');return;}
+  let html=`<html><head><meta charset="utf-8"><title>棚卸リスト</title><style>body{font-family:sans-serif;font-size:13px;padding:20px}h2{margin-bottom:4px}p{color:#666;font-size:12px;margin-bottom:12px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:6px 10px;text-align:left}th{background:#f0f0f0}</style></head><body>`;
+  html+=`<h2>棚卸リスト — ${curStore}</h2><p>棚卸日: ${today()}</p>`;
+  html+=`<table><thead><tr><th>問屋</th><th>商品名</th><th>原単価</th><th>数量</th><th>合計</th></tr></thead><tbody>`;
+  rows.forEach(i=>{html+=`<tr><td>${i.tonya}</td><td>${i.name}</td><td>¥${i.price.toLocaleString()}</td><td>${i.qty}</td><td>¥${(i.price*i.qty).toLocaleString()}</td></tr>`;});
+  html+='</tbody></table></body></html>';
+  const w=window.open('','_blank');
+  if(w){w.document.write(html); w.document.close(); setTimeout(()=>w.print(),300);}
+  else{toast('ポップアップがブロックされました');}
+}
+
+loadData();
+document.getElementById('login-date').textContent=today();
+const lastStore=localStorage.getItem('lastStore');
+if(lastStore){
+  document.querySelectorAll('.s-store').forEach(btn=>{
+    if(btn.textContent===lastStore){
+      btn.classList.add('selected');
+      curStore=lastStore;
+      const bs=document.getElementById('btn-start');
+      bs.textContent=`${lastStore}で棚卸を開始 →`;
+      bs.classList.add('on');
+    }
+  });
+}
+const isStandalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
+if(!isStandalone&&!localStorage.getItem('hideHint')){
+  document.getElementById('install-hint').classList.remove('hidden');
+}
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(e=>console.log('SW登録失敗',e));
+}
+</script>
+
+</body>
+</html>
