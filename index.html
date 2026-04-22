@@ -78,6 +78,12 @@ html,body{
 .tonya-card.has-items{border-color:var(--ca);background:var(--cal);}
 .tonya-card.has-items .tc-name{color:var(--cad);}
 @media (prefers-color-scheme:dark){.tonya-card.has-items{background:rgba(24,95,165,0.2);} .tonya-card.has-items .tc-name{color:#B5D4F4;}}
+.tonya-card.all-card{border-color:var(--cp);background:var(--cpl);grid-column:span 2;padding:14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+@media (prefers-color-scheme:dark){.tonya-card.all-card{background:rgba(29,158,117,0.18);}}
+.tonya-card.all-card .tc-name{color:var(--cpd);font-size:15px;text-align:left;}
+@media (prefers-color-scheme:dark){.tonya-card.all-card .tc-name{color:#9FE1CB;}}
+.tonya-card.all-card .tc-count{color:var(--cpd);margin-top:2px;text-align:left;}
+@media (prefers-color-scheme:dark){.tonya-card.all-card .tc-count{color:#5DCAA5;}}
 .tonya-card .tc-name{font-size:15px;font-weight:600;color:var(--txt);}
 .tonya-card .tc-count{font-size:11px;color:var(--txt2);margin-top:4px;}
 .tonya-card.has-items .tc-count{color:var(--cad);}
@@ -86,6 +92,11 @@ html,body{
 .tonya-detail-hdr{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-top:4px;}
 .back-btn{padding:8px 12px;border:1px solid var(--border2);border-radius:8px;background:var(--surf);color:var(--txt);font-size:13px;cursor:pointer;}
 .tonya-detail-hdr h2{font-size:17px;font-weight:600;color:var(--txt);}
+
+.search-wrap{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.search-wrap input{flex:1;font-size:15px;padding:6px 4px;border:none;background:transparent;color:var(--txt);outline:none;}
+.search-wrap .si{color:var(--txt3);font-size:16px;}
+.search-wrap .clear{background:none;border:none;color:var(--txt3);cursor:pointer;font-size:18px;padding:4px;line-height:1;}
 
 .add-form{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;}
 .add-form h3{font-size:14px;font-weight:600;margin-bottom:12px;color:var(--txt);}
@@ -101,6 +112,8 @@ html,body{
 .inv-item-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px;}
 .inv-name{font-size:14px;font-weight:600;color:var(--txt);line-height:1.35;}
 .inv-price{font-size:12px;color:var(--txt2);margin-top:3px;}
+.tonya-pill{display:inline-block;font-size:10px;padding:2px 8px;border-radius:99px;background:var(--cal);color:var(--cad);margin-top:5px;font-weight:500;}
+@media (prefers-color-scheme:dark){.tonya-pill{background:rgba(24,95,165,0.3);color:#85B7EB;}}
 .qty-row{display:flex;justify-content:space-between;align-items:center;}
 .qty-ctrl{display:flex;align-items:center;gap:8px;}
 .qty-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--border2);background:var(--bg);color:var(--txt);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:600;}
@@ -119,7 +132,7 @@ html,body{
 
 .bnav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--surf);border-top:1px solid var(--border);padding:8px 0 calc(12px + env(safe-area-inset-bottom));max-width:480px;margin:0 auto;z-index:20;}
 .nbtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;padding:6px;color:var(--txt2);}
-.nbtn .ni{font-size:22px;}
+.nbtn .ni{font-size:20px;}
 .nbtn .nl{font-size:11px;}
 .nbtn.active{color:var(--cp);}
 .nbtn.active .nl{font-weight:600;}
@@ -135,6 +148,14 @@ html,body{
 .install-hint{background:var(--cal);border-radius:8px;padding:10px 12px;margin:0 16px 12px;font-size:12px;color:var(--cad);line-height:1.5;display:flex;justify-content:space-between;align-items:center;gap:8px;}
 @media (prefers-color-scheme:dark){.install-hint{background:rgba(24,95,165,0.2);color:#B5D4F4;}}
 .install-hint .close{background:none;border:none;color:inherit;cursor:pointer;font-size:18px;padding:0 4px;}
+
+.filter-bar{display:flex;gap:6px;overflow-x:auto;margin-bottom:10px;padding-bottom:4px;-webkit-overflow-scrolling:touch;}
+.filter-bar::-webkit-scrollbar{display:none;}
+.filter-pill{flex-shrink:0;padding:7px 14px;border-radius:99px;border:1px solid var(--border2);background:var(--surf);color:var(--txt2);font-size:12px;cursor:pointer;white-space:nowrap;font-weight:500;}
+.filter-pill.active{background:var(--cp);color:white;border-color:var(--cp);}
+
+.all-summary{background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:var(--txt2);}
+.all-summary strong{color:var(--txt);font-weight:600;font-size:14px;}
 </style>
 </head>
 <body>
@@ -186,17 +207,31 @@ html,body{
 
     <div class="tab-bar">
       <button class="tab active" onclick="showTab('tonya')">問屋</button>
-      <button class="tab" onclick="showTab('export')">エクスポート</button>
+      <button class="tab" onclick="showTab('all')">全商品</button>
+      <button class="tab" onclick="showTab('export')">出力</button>
     </div>
 
     <div class="panel active" id="panel-tonya">
       <div id="view-tonya-list">
+        <div class="tonya-card all-card" onclick="showTab('all')">
+          <div>
+            <div class="tc-name">🔍 全商品を見る / 検索</div>
+            <div class="tc-count" id="all-count-preview">0品目登録</div>
+          </div>
+          <div style="font-size:22px;color:var(--cpd);">→</div>
+        </div>
         <div class="tonya-grid" id="tonya-grid"></div>
       </div>
       <div id="view-tonya-detail" class="hidden">
         <div class="tonya-detail-hdr">
           <button class="back-btn" onclick="backToList()">← 戻る</button>
           <h2 id="detail-title"></h2>
+        </div>
+
+        <div class="search-wrap">
+          <span class="si">🔍</span>
+          <input type="text" id="tonya-search" placeholder="この問屋内で検索..." oninput="renderInvList()">
+          <button class="clear" onclick="document.getElementById('tonya-search').value='';renderInvList();">×</button>
         </div>
 
         <div class="add-form">
@@ -216,6 +251,17 @@ html,body{
       </div>
     </div>
 
+    <div class="panel" id="panel-all">
+      <div class="search-wrap">
+        <span class="si">🔍</span>
+        <input type="text" id="all-search" placeholder="商品名で検索..." oninput="renderAllList()">
+        <button class="clear" onclick="document.getElementById('all-search').value='';renderAllList();">×</button>
+      </div>
+      <div class="filter-bar" id="filter-bar"></div>
+      <div class="all-summary" id="all-summary"></div>
+      <div class="inv-list" id="all-list"></div>
+    </div>
+
     <div class="panel" id="panel-export">
       <div class="exp-card">
         <h3>棚卸データをエクスポート</h3>
@@ -232,7 +278,8 @@ html,body{
 
     <div class="bnav">
       <button class="nbtn active" id="nav-tonya" onclick="showTab('tonya')"><span class="ni">⊟</span><span class="nl">問屋</span></button>
-      <button class="nbtn" id="nav-export" onclick="showTab('export')"><span class="ni">↑</span><span class="nl">エクスポート</span></button>
+      <button class="nbtn" id="nav-all" onclick="showTab('all')"><span class="ni">🔍</span><span class="nl">全商品</span></button>
+      <button class="nbtn" id="nav-export" onclick="showTab('export')"><span class="ni">↑</span><span class="nl">出力</span></button>
     </div>
   </div>
 </div>
@@ -240,8 +287,8 @@ html,body{
 <div class="toast" id="toast"></div>
 
 <script>
-const TONYAS=['マリンフーズ','南給','あじかん','イケワキ','セイカ','中央包装','山崎','キンコー醤油','日本食研','ダイショー'];
-const STORAGE_KEY='inventory_app_v1';
+const TONYAS=['マリンフーズ','南給','あじかん','イケワキ','セイカ','中央包装','山崎','キンコー醤油','日本食研','ダイショー','市場','フレッシュ青果'];
+const STORAGE_KEY='inventory_app_v2';
 
 const DEFAULT_SEED={
   'セイカ':[
@@ -275,11 +322,15 @@ const DEFAULT_SEED={
     {name:'FLBユニコーK13-25 W',price:857},
     {name:'バイオPET AC-25-14F',price:1287},
     {name:'食品離型油 リケイ君 480ml',price:800}
+  ],
+  'フレッシュ青果':[
+    {name:'大根のケン 1kg',price:330}
   ]
 };
 
 let curStore='', curTonya='';
 let master={}, invData={};
+let allFilter='';
 
 function loadData(){
   const saved=localStorage.getItem(STORAGE_KEY);
@@ -316,6 +367,8 @@ function today(){const d=new Date();return d.getFullYear()+'/'+String(d.getMonth
 
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2200);}
 
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
 function selStore(btn,name){
   document.querySelectorAll('.s-store').forEach(b=>b.classList.remove('selected'));
   btn.classList.add('selected'); curStore=name;
@@ -350,6 +403,9 @@ function renderTonyaGrid(){
       <div class="tc-count">${cnt?cnt+'品目 / 計'+qty+'個':'商品なし'}</div>
     </div>`;
   }).join('');
+  const total=Object.values(master).flat().length;
+  const totalQty=Object.values(invData).flat().reduce((s,i)=>s+i.qty,0);
+  document.getElementById('all-count-preview').textContent=total+'品目 / 計'+totalQty+'個';
 }
 
 function openTonya(name){
@@ -359,6 +415,7 @@ function openTonya(name){
   document.getElementById('detail-title').textContent=name;
   document.getElementById('hdr-tonya').textContent=name;
   document.getElementById('hdr-tonya').style.display='';
+  document.getElementById('tonya-search').value='';
   renderInvList();
   window.scrollTo(0,0);
 }
@@ -386,16 +443,18 @@ function addMasterItem(){
   renderInvList(); updateStats();
 }
 
-function setQty(id,val){
-  const item=invData[curTonya].find(i=>i.id===id);
+function setQty(id,val,tonya){
+  const t=tonya||curTonya;
+  const item=invData[t].find(i=>i.id===id);
   if(item)item.qty=Math.max(0,parseInt(val)||0);
   saveData(); updateStats();
   const tot=document.getElementById('tot-'+id);
   if(tot&&item)tot.textContent=item.price?'¥'+(item.price*item.qty).toLocaleString():'';
 }
 
-function changeQty(id,delta){
-  const item=invData[curTonya].find(i=>i.id===id);
+function changeQty(id,delta,tonya){
+  const t=tonya||curTonya;
+  const item=invData[t].find(i=>i.id===id);
   if(item){
     item.qty=Math.max(0,item.qty+delta);
     const inp=document.getElementById('qi-'+id);
@@ -406,41 +465,86 @@ function changeQty(id,delta){
   }
 }
 
-function delItem(id){
+function delItem(id,tonya){
   if(!confirm('この商品を削除しますか？'))return;
-  master[curTonya]=master[curTonya].filter(i=>i.id!==id);
-  invData[curTonya]=invData[curTonya].filter(i=>i.id!==id);
+  const t=tonya||curTonya;
+  master[t]=master[t].filter(i=>i.id!==id);
+  invData[t]=invData[t].filter(i=>i.id!==id);
   saveData();
-  renderInvList(); updateStats();
+  if(document.getElementById('panel-all').classList.contains('active'))renderAllList();
+  else renderInvList();
+  updateStats();
 }
 
 function renderInvList(){
   const items=invData[curTonya]||[];
+  const q=document.getElementById('tonya-search').value.trim().toLowerCase();
+  const filtered=q?items.filter(i=>i.name.toLowerCase().includes(q)):items;
   const el=document.getElementById('inv-list');
   document.getElementById('inv-list-title').textContent=curTonya+'の商品一覧';
-  document.getElementById('inv-count').textContent=items.length+'品目';
+  document.getElementById('inv-count').textContent=q?`${filtered.length}/${items.length}品目`:items.length+'品目';
   if(!items.length){el.innerHTML='<div class="empty">商品がまだありません<br>上のフォームから追加してください</div>';return;}
-  el.innerHTML=items.map(i=>`
-    <div class="inv-item">
-      <div class="inv-item-top">
-        <div style="flex:1;min-width:0;">
-          <div class="inv-name">${escapeHtml(i.name)}</div>
-          <div class="inv-price">${i.price?'原単価 ¥'+i.price.toLocaleString():'単価未設定'}</div>
-        </div>
-        <button class="del-btn" onclick="delItem(${i.id})">削除</button>
-      </div>
-      <div class="qty-row">
-        <div class="qty-ctrl">
-          <button class="qty-btn" onclick="changeQty(${i.id},-1)">−</button>
-          <input class="qty-input" id="qi-${i.id}" type="number" min="0" inputmode="numeric" value="${i.qty}" onchange="setQty(${i.id},this.value)">
-          <button class="qty-btn" onclick="changeQty(${i.id},+1)">＋</button>
-        </div>
-        <span class="inv-total" id="tot-${i.id}">${i.price&&i.qty?'¥'+(i.price*i.qty).toLocaleString():''}</span>
-      </div>
-    </div>`).join('');
+  if(!filtered.length){el.innerHTML='<div class="empty">検索条件に一致する商品がありません</div>';return;}
+  el.innerHTML=filtered.map(i=>itemCardHtml(i,curTonya,false)).join('');
 }
 
-function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function itemCardHtml(i,tonya,showTonya){
+  return `<div class="inv-item">
+    <div class="inv-item-top">
+      <div style="flex:1;min-width:0;">
+        <div class="inv-name">${escapeHtml(i.name)}</div>
+        <div class="inv-price">${i.price?'原単価 ¥'+i.price.toLocaleString():'単価未設定'}</div>
+        ${showTonya?`<span class="tonya-pill">${tonya}</span>`:''}
+      </div>
+      <button class="del-btn" onclick="delItem(${i.id},'${tonya}')">削除</button>
+    </div>
+    <div class="qty-row">
+      <div class="qty-ctrl">
+        <button class="qty-btn" onclick="changeQty(${i.id},-1,'${tonya}')">−</button>
+        <input class="qty-input" id="qi-${i.id}" type="number" min="0" inputmode="numeric" value="${i.qty}" onchange="setQty(${i.id},this.value,'${tonya}')">
+        <button class="qty-btn" onclick="changeQty(${i.id},+1,'${tonya}')">＋</button>
+      </div>
+      <span class="inv-total" id="tot-${i.id}">${i.price&&i.qty?'¥'+(i.price*i.qty).toLocaleString():''}</span>
+    </div>
+  </div>`;
+}
+
+function renderFilterBar(){
+  const bar=document.getElementById('filter-bar');
+  const tonyasWithItems=TONYAS.filter(t=>(master[t]||[]).length>0);
+  let html=`<button class="filter-pill ${allFilter===''?'active':''}" onclick="setFilter('')">全て (${Object.values(master).flat().length})</button>`;
+  tonyasWithItems.forEach(t=>{
+    const cnt=master[t].length;
+    html+=`<button class="filter-pill ${allFilter===t?'active':''}" onclick="setFilter('${t}')">${t} (${cnt})</button>`;
+  });
+  bar.innerHTML=html;
+}
+
+function setFilter(t){
+  allFilter=t;
+  renderAllList();
+}
+
+function renderAllList(){
+  renderFilterBar();
+  const q=document.getElementById('all-search').value.trim().toLowerCase();
+  let all=[];
+  TONYAS.forEach(t=>{
+    if(allFilter&&allFilter!==t)return;
+    (invData[t]||[]).forEach(i=>{
+      if(!q||i.name.toLowerCase().includes(q)){
+        all.push({...i,tonya:t});
+      }
+    });
+  });
+  const total=Object.values(invData).flat().length;
+  const totalQty=all.reduce((s,i)=>s+i.qty,0);
+  const sumEl=document.getElementById('all-summary');
+  sumEl.innerHTML=`<div><strong>${all.length}</strong>品目 / 計<strong>${totalQty}</strong>個${(q||allFilter)?` <span style="color:var(--txt3);">(全${total}品目中)</span>`:''}</div>`;
+  const el=document.getElementById('all-list');
+  if(!all.length){el.innerHTML='<div class="empty">該当する商品がありません</div>';return;}
+  el.innerHTML=all.map(i=>itemCardHtml(i,i.tonya,true)).join('');
+}
 
 function updateStats(){
   const allItems=Object.values(invData).flat();
@@ -450,12 +554,13 @@ function updateStats(){
 }
 
 function showTab(t){
-  ['tonya','export'].forEach((x,i)=>{
+  ['tonya','all','export'].forEach((x,i)=>{
     document.getElementById('panel-'+x).classList.toggle('active',x===t);
     document.getElementById('nav-'+x).classList.toggle('active',x===t);
     document.querySelectorAll('.tab')[i].classList.toggle('active',x===t);
   });
   if(t==='export')renderExport();
+  if(t==='all')renderAllList();
   window.scrollTo(0,0);
 }
 
