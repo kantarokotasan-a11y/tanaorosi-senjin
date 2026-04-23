@@ -133,6 +133,10 @@ html,body{
 .case-btn-minus{background:var(--surf);color:var(--txt2);}
 @media (prefers-color-scheme:dark){.case-btn-minus{background:var(--surf2);color:var(--txt2);}}
 
+.half-row{display:flex;gap:5px;margin-top:6px;}
+.half-btn{flex:1;padding:7px 4px;border-radius:6px;border:1px solid var(--border);background:var(--surf);color:var(--txt2);font-size:11px;font-weight:500;cursor:pointer;}
+.half-btn:active{background:var(--surf2);}
+
 .exp-card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;}
 .exp-card h3{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--txt);}
 .exp-card p{font-size:13px;color:var(--txt2);margin-bottom:14px;}
@@ -196,6 +200,56 @@ html,body{
   </div>
   <button class="btn-start" id="btn-start" onclick="startApp()">棚卸を開始 →</button>
   <p class="login-date" id="login-date"></p>
+  <div style="margin-top:24px;padding:0 16px;">
+    <button id="btn-master" style="width:100%;padding:12px;background:transparent;color:var(--txt2);border:1px solid var(--border2);border-radius:10px;font-size:13px;cursor:pointer;" onclick="openMasterModal()">📥 商品マスタをExcelから更新</button>
+  </div>
+</div>
+
+<div id="master-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;">
+  <div style="background:var(--surf);border-radius:12px;max-width:480px;width:100%;padding:20px;margin-top:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h2 style="font-size:17px;font-weight:600;color:var(--txt);">商品マスタの更新</h2>
+      <button onclick="closeMasterModal()" style="background:none;border:none;font-size:24px;color:var(--txt2);cursor:pointer;line-height:1;">×</button>
+    </div>
+    
+    <p style="font-size:13px;color:var(--txt2);line-height:1.6;margin-bottom:12px;">
+      Excelファイル（.xlsx）を選択してください。<br>
+      <strong style="color:var(--txt);">更新ルール：</strong><br>
+      ・同じ商品名 → 情報を上書き更新<br>
+      ・新しい商品名 → 追加<br>
+      ・Excelにない既存商品 → そのまま残す<br>
+      <strong style="color:var(--cad);">※全店舗に反映されます</strong>
+    </p>
+    
+    <div style="background:var(--bg);border:1px dashed var(--border2);border-radius:8px;padding:14px;margin-bottom:12px;">
+      <p style="font-size:11px;color:var(--txt2);margin-bottom:8px;">📋 Excelの形式</p>
+      <p style="font-size:11px;color:var(--txt3);line-height:1.5;">
+        ・シート名 = 問屋名<br>
+        ・1行目：ヘッダー（A列空欄、B〜F列に項目名）<br>
+        ・B列：商品名 / C列：単位 / D列：原単価<br>
+        ・E列：ケース,袋 / F列：ケース数量
+      </p>
+    </div>
+    
+    <label for="xlsx-input" style="display:block;width:100%;padding:14px;background:var(--cp);color:white;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;text-align:center;">
+      📂 Excelファイルを選択
+    </label>
+    <input type="file" id="xlsx-input" accept=".xlsx,.xls" style="display:none;" onchange="handleXlsxFile(event)">
+    
+    <div id="master-loading" class="hidden" style="text-align:center;padding:14px;font-size:13px;color:var(--txt2);">読み込み中...</div>
+    
+    <div id="master-preview" class="hidden" style="margin-top:14px;">
+      <div style="padding:12px;background:var(--cal);border-radius:8px;margin-bottom:12px;">
+        <div style="font-size:14px;font-weight:600;color:var(--cad);margin-bottom:6px;">📊 プレビュー</div>
+        <div id="master-preview-stats" style="font-size:13px;color:var(--cad);line-height:1.7;"></div>
+      </div>
+      <div id="master-preview-detail" style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;font-family:monospace;background:var(--bg);"></div>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button onclick="closeMasterModal()" style="flex:1;padding:12px;background:var(--surf2);color:var(--txt);border:1px solid var(--border2);border-radius:8px;font-size:13px;cursor:pointer;">キャンセル</button>
+        <button onclick="confirmMasterImport()" style="flex:2;padding:12px;background:var(--cp);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">✓ マスタを更新する</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="sc-app" class="hidden">
@@ -301,6 +355,89 @@ html,body{
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div id="sync-indicator" style="position:fixed;top:env(safe-area-inset-top);right:10px;z-index:30;font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(29,158,117,0.9);color:white;opacity:0;transition:opacity 0.3s;pointer-events:none;">同期中...</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBWwUlrWPYbW_7_UrvOEFZbbRvJ4bJYEhM",
+  authDomain: "senjin-tanaapp.firebaseapp.com",
+  projectId: "senjin-tanaapp",
+  storageBucket: "senjin-tanaapp.firebasestorage.app",
+  messagingSenderId: "405728808827",
+  appId: "1:405728808827:web:52435cce2946a7295ef7de"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+
+try{
+  await enableIndexedDbPersistence(db);
+}catch(e){
+  console.log('オフライン永続化は有効化できませんでした（複数タブ等）',e.code);
+}
+
+let syncTimer=null;
+let unsubscribe=null;
+let isRemoteUpdate=false;
+
+function showSync(msg){
+  const el=document.getElementById('sync-indicator');
+  el.textContent=msg;
+  el.style.opacity='1';
+  clearTimeout(showSync._t);
+  showSync._t=setTimeout(()=>el.style.opacity='0',1500);
+}
+
+window.cloudSave=function(storeName,data){
+  if(!storeName)return;
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(async()=>{
+    try{
+      showSync('☁ 保存中...');
+      await setDoc(doc(db,'stores',storeName),{
+        master:data.master,
+        invData:data.invData,
+        updatedAt:new Date().toISOString()
+      });
+      showSync('✓ 同期完了');
+    }catch(e){
+      console.error('保存エラー',e);
+      showSync('⚠ オフライン');
+    }
+  },600);
+};
+
+window.cloudSubscribe=function(storeName,onData){
+  if(unsubscribe){unsubscribe();unsubscribe=null;}
+  if(!storeName)return;
+  showSync('☁ 読み込み中...');
+  unsubscribe=onSnapshot(doc(db,'stores',storeName),(snap)=>{
+    if(snap.exists()){
+      const d=snap.data();
+      isRemoteUpdate=true;
+      onData(d);
+      isRemoteUpdate=false;
+      showSync('✓ 同期完了');
+    }else{
+      showSync('✓ 新規店舗');
+      onData(null);
+    }
+  },(err)=>{
+    console.error('購読エラー',err);
+    showSync('⚠ 接続エラー');
+  });
+};
+
+window.cloudUnsubscribe=function(){
+  if(unsubscribe){unsubscribe();unsubscribe=null;}
+};
+
+window.isRemoteUpdate=()=>isRemoteUpdate;
+</script>
 
 <script>
 const TONYAS=['マリンフーズ','南給','あじかん','イケワキ','セイカ','マルタカ','中央包装','山崎','市場','フレッシュ青果','その他'];
@@ -832,6 +969,20 @@ let curStore='', curTonya='';
 let master={}, invData={};
 let allFilter='';
 
+function initDefaultData(){
+  master={}; invData={};
+  TONYAS.forEach(t=>{master[t]=[];invData[t]=[];});
+  Object.entries(DEFAULT_SEED).forEach(([tonya,items])=>{
+    if(!TONYAS.includes(tonya))return;
+    items.forEach((item,i)=>{
+      const id=Date.now()+Math.random()*1000+i;
+      const m={id,name:item.name,unit:item.unit||'',price:item.price||0,caseType:item.caseType||'',caseQty:item.caseQty||0};
+      master[tonya].push(m);
+      invData[tonya].push({...m,qty:0});
+    });
+  });
+}
+
 function loadData(){
   const saved=localStorage.getItem(STORAGE_KEY);
   if(saved){
@@ -846,23 +997,40 @@ function loadData(){
       return;
     }catch(e){console.error(e);}
   }
-  TONYAS.forEach(t=>{master[t]=[];invData[t]=[];});
-  Object.entries(DEFAULT_SEED).forEach(([tonya,items])=>{
-    if(!TONYAS.includes(tonya))return;
-    items.forEach((item,i)=>{
-      const id=Date.now()+Math.random()*1000+i;
-      const m={id,name:item.name,unit:item.unit||'',price:item.price||0,caseType:item.caseType||'',caseQty:item.caseQty||0};
-      master[tonya].push(m);
-      invData[tonya].push({...m,qty:0});
-    });
-  });
+  initDefaultData();
   saveData();
+}
+
+function applyCloudData(d){
+  if(!d){
+    initDefaultData();
+  }else{
+    master=d.master||{};
+    invData=d.invData||{};
+    TONYAS.forEach(t=>{
+      if(!master[t])master[t]=[];
+      if(!invData[t])invData[t]=[];
+    });
+  }
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify({master,invData}));}catch(e){}
+  if(document.getElementById('sc-app') && !document.getElementById('sc-app').classList.contains('hidden')){
+    if(curTonya){
+      if(document.getElementById('panel-all').classList.contains('active'))renderAllList();
+      else renderInvList();
+    }else{
+      renderTonyaGrid();
+    }
+    updateStats();
+  }
 }
 
 function saveData(){
   try{
     localStorage.setItem(STORAGE_KEY,JSON.stringify({master,invData}));
   }catch(e){console.error('保存失敗',e);}
+  if(curStore && window.cloudSave && !(window.isRemoteUpdate && window.isRemoteUpdate())){
+    window.cloudSave(curStore,{master,invData});
+  }
 }
 
 function today(){const d=new Date();return d.getFullYear()+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0');}
@@ -887,10 +1055,19 @@ function startApp(){
   document.getElementById('sc-app').classList.remove('hidden');
   document.getElementById('hdr-store').textContent=curStore;
   document.getElementById('hdr-tonya').style.display='none';
+  if(window.cloudSubscribe){
+    window.cloudSubscribe(curStore,(cloudData)=>{
+      applyCloudData(cloudData);
+      if(!cloudData){
+        saveData();
+      }
+    });
+  }
   renderTonyaGrid(); updateStats();
 }
 
 function goLogin(){
+  if(window.cloudUnsubscribe)window.cloudUnsubscribe();
   document.getElementById('sc-login').classList.remove('hidden');
   document.getElementById('sc-app').classList.add('hidden');
   window.scrollTo(0,0);
@@ -904,12 +1081,12 @@ function renderTonyaGrid(){
     const cls=cnt>0?'tonya-card has-items':'tonya-card';
     return `<div class="${cls}" onclick="openTonya('${t}')">
       <div class="tc-name">${t}</div>
-      <div class="tc-count">${cnt?cnt+'品目 / 計'+qty+'個':'商品なし'}</div>
+      <div class="tc-count">${cnt?cnt+'品目 / 計'+fmtQty(qty)+'個':'商品なし'}</div>
     </div>`;
   }).join('');
   const total=Object.values(master).flat().length;
   const totalQty=Object.values(invData).flat().reduce((s,i)=>s+i.qty,0);
-  document.getElementById('all-count-preview').textContent=total+'品目 / 計'+totalQty+'個';
+  document.getElementById('all-count-preview').textContent=total+'品目 / 計'+fmtQty(totalQty)+'個';
 }
 
 function openTonya(name){
@@ -954,7 +1131,7 @@ function addMasterItem(){
 function setQty(id,val,tonya){
   const t=tonya||curTonya;
   const item=invData[t].find(i=>i.id==id);
-  if(item)item.qty=Math.max(0,parseInt(val)||0);
+  if(item)item.qty=Math.max(0,parseFloat(val)||0);
   saveData(); updateStats(); updateTotals(id,item);
 }
 
@@ -962,9 +1139,9 @@ function changeQty(id,delta,tonya){
   const t=tonya||curTonya;
   const item=invData[t].find(i=>i.id==id);
   if(item){
-    item.qty=Math.max(0,item.qty+delta);
+    item.qty=Math.max(0,Math.round((item.qty+delta)*100)/100);
     const inp=document.getElementById('qi-'+id);
-    if(inp)inp.value=item.qty;
+    if(inp)inp.value=fmtQty(item.qty);
     updateTotals(id,item);
     saveData(); updateStats();
   }
@@ -976,16 +1153,22 @@ function addByCase(id,sign,tonya){
   if(item&&item.caseQty){
     item.qty=Math.max(0,item.qty+sign*item.caseQty);
     const inp=document.getElementById('qi-'+id);
-    if(inp)inp.value=item.qty;
+    if(inp)inp.value=fmtQty(item.qty);
     updateTotals(id,item);
     saveData(); updateStats();
     if(sign>0)toast(`+1${item.caseType} (${item.caseQty}${item.unit||'個'})`);
   }
 }
 
+function fmtQty(q){
+  if(q==null||q==='')return '';
+  if(Number.isInteger(q))return String(q);
+  return String(Math.round(q*100)/100);
+}
+
 function updateTotals(id,item){
   const tot=document.getElementById('tot-'+id);
-  if(tot&&item)tot.textContent=item.price?fmtPrice(item.price*item.qty):'';
+  if(tot&&item)tot.textContent=item.price?'¥'+Math.round(item.price*item.qty).toLocaleString():'';
 }
 
 function delItem(id,tonya){
@@ -1032,12 +1215,18 @@ function itemCardHtml(i,tonya,showTonya){
       <div class="qty-ctrl">
         <button class="qty-btn" onclick="changeQty(${i.id},-1,'${tonya}')">−</button>
         <div class="qty-input-wrap">
-          <input class="qty-input" id="qi-${i.id}" type="number" min="0" inputmode="numeric" value="${i.qty}" onchange="setQty(${i.id},this.value,'${tonya}')">
+          <input class="qty-input" id="qi-${i.id}" type="text" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" value="${fmtQty(i.qty)}" onchange="setQty(${i.id},this.value,'${tonya}')">
           <span class="qty-unit">${i.unit||''}</span>
         </div>
         <button class="qty-btn" onclick="changeQty(${i.id},+1,'${tonya}')">＋</button>
       </div>
-      <span class="inv-total" id="tot-${i.id}">${i.price&&i.qty?fmtPrice(i.price*i.qty):''}</span>
+      <span class="inv-total" id="tot-${i.id}">${i.price&&i.qty?'¥'+Math.round(i.price*i.qty).toLocaleString():''}</span>
+    </div>
+    <div class="half-row">
+      <button class="half-btn" onclick="changeQty(${i.id},-0.5,'${tonya}')">−0.5</button>
+      <button class="half-btn" onclick="changeQty(${i.id},-0.1,'${tonya}')">−0.1</button>
+      <button class="half-btn" onclick="changeQty(${i.id},+0.1,'${tonya}')">＋0.1</button>
+      <button class="half-btn" onclick="changeQty(${i.id},+0.5,'${tonya}')">＋0.5</button>
     </div>
     ${caseBtns}
   </div>`;
@@ -1074,7 +1263,7 @@ function renderAllList(){
   const total=Object.values(invData).flat().length;
   const totalQty=all.reduce((s,i)=>s+i.qty,0);
   const sumEl=document.getElementById('all-summary');
-  sumEl.innerHTML=`<div><strong>${all.length}</strong>品目 / 計<strong>${totalQty}</strong>個${(q||allFilter)?` <span style="color:var(--txt3);">(全${total}品目中)</span>`:''}</div>`;
+  sumEl.innerHTML=`<div><strong>${all.length}</strong>品目 / 計<strong>${fmtQty(totalQty)}</strong>個${(q||allFilter)?` <span style="color:var(--txt3);">(全${total}品目中)</span>`:''}</div>`;
   const el=document.getElementById('all-list');
   if(!all.length){el.innerHTML='<div class="empty">該当する商品がありません</div>';return;}
   el.innerHTML=all.map(i=>itemCardHtml(i,i.tonya,true)).join('');
@@ -1083,7 +1272,8 @@ function renderAllList(){
 function updateStats(){
   const allItems=Object.values(invData).flat();
   document.getElementById('stat-total').textContent=allItems.length;
-  document.getElementById('stat-qty').textContent=allItems.reduce((s,i)=>s+i.qty,0);
+  const totalQty=allItems.reduce((s,i)=>s+i.qty,0);
+  document.getElementById('stat-qty').textContent=fmtQty(totalQty);
   document.getElementById('stat-cats').textContent=TONYAS.filter(t=>(invData[t]||[]).some(i=>i.qty>0)).length;
 }
 
@@ -1099,23 +1289,26 @@ function showTab(t){
 }
 
 function allRows(){return Object.entries(invData).flatMap(([t,items])=>items.map(i=>({...i,tonya:t})));}
+function nonZeroRows(){return allRows().filter(i=>i.qty>0);}
 
 function renderExport(){
-  const all=allRows();
-  document.getElementById('exp-summary').textContent=`${curStore} — 全${all.length}品目`;
+  const all=nonZeroRows();
+  document.getElementById('exp-summary').textContent=all.length?`${curStore} — 数量記入済み ${all.length}品目`:`${curStore} — 数量が記入された商品はありません`;
   
-  const shohinTonyas=TONYAS.filter(t=>!isShizai(t)&&(invData[t]||[]).length>0);
-  const shizaiTonyas=TONYAS.filter(t=>isShizai(t)&&(invData[t]||[]).length>0);
+  const makeRows=(filterFn)=>{
+    return TONYAS.filter(t=>{
+      if(!filterFn(t))return false;
+      return (invData[t]||[]).some(i=>i.qty>0);
+    }).map(t=>{
+      const items=(invData[t]||[]).filter(i=>i.qty>0);
+      const qty=items.reduce((s,i)=>s+i.qty,0);
+      const val=items.reduce((s,i)=>s+(i.price*i.qty),0);
+      return {t,cnt:items.length,qty,val};
+    });
+  };
   
-  const makeRows=(tonyas)=>tonyas.map(t=>{
-    const items=invData[t];
-    const qty=items.reduce((s,i)=>s+i.qty,0);
-    const val=items.reduce((s,i)=>s+(i.price*i.qty),0);
-    return {t,cnt:items.length,qty,val};
-  });
-  
-  const shohinData=makeRows(shohinTonyas);
-  const shizaiData=makeRows(shizaiTonyas);
+  const shohinData=makeRows(t=>!isShizai(t));
+  const shizaiData=makeRows(t=>isShizai(t));
   
   const shohinSum={cnt:shohinData.reduce((s,r)=>s+r.cnt,0),qty:shohinData.reduce((s,r)=>s+r.qty,0),val:shohinData.reduce((s,r)=>s+r.val,0)};
   const shizaiSum={cnt:shizaiData.reduce((s,r)=>s+r.cnt,0),qty:shizaiData.reduce((s,r)=>s+r.qty,0),val:shizaiData.reduce((s,r)=>s+r.val,0)};
@@ -1123,19 +1316,19 @@ function renderExport(){
   
   const buildSection=(title,data,sum,color)=>{
     if(!data.length)return '';
-    const rows=data.map(r=>`<tr><td style="padding:6px 0;color:var(--txt2);padding-left:10px;">${r.t}</td><td style="text-align:right;padding:6px 0;">${r.cnt}品目</td><td style="text-align:right;padding:6px 0;">${r.qty}個</td><td style="text-align:right;padding:6px 0;">¥${Math.round(r.val).toLocaleString()}</td></tr>`).join('');
-    return `<tr><td colspan="4" style="padding:10px 0 4px;font-size:12px;font-weight:600;color:${color};border-bottom:1px solid var(--border);">${title}</td></tr>${rows}<tr style="background:var(--surf2);"><td style="padding:7px 0 7px 10px;font-weight:600;color:var(--txt);">${title}小計</td><td style="text-align:right;padding:7px 0;font-weight:600;">${sum.cnt}品目</td><td style="text-align:right;padding:7px 0;font-weight:600;">${sum.qty}個</td><td style="text-align:right;padding:7px 0;font-weight:600;color:${color};">¥${Math.round(sum.val).toLocaleString()}</td></tr>`;
+    const rows=data.map(r=>`<tr><td style="padding:6px 0;color:var(--txt2);padding-left:10px;">${r.t}</td><td style="text-align:right;padding:6px 0;">${r.cnt}品目</td><td style="text-align:right;padding:6px 0;">${fmtQty(r.qty)}個</td><td style="text-align:right;padding:6px 0;">¥${Math.round(r.val).toLocaleString()}</td></tr>`).join('');
+    return `<tr><td colspan="4" style="padding:10px 0 4px;font-size:12px;font-weight:600;color:${color};border-bottom:1px solid var(--border);">${title}</td></tr>${rows}<tr style="background:var(--surf2);"><td style="padding:7px 0 7px 10px;font-weight:600;color:var(--txt);">${title}小計</td><td style="text-align:right;padding:7px 0;font-weight:600;">${sum.cnt}品目</td><td style="text-align:right;padding:7px 0;font-weight:600;">${fmtQty(sum.qty)}個</td><td style="text-align:right;padding:7px 0;font-weight:600;color:${color};">¥${Math.round(sum.val).toLocaleString()}</td></tr>`;
   };
   
   if(!shohinData.length&&!shizaiData.length){
-    document.getElementById('exp-summary-tbl').innerHTML='<p style="font-size:12px;color:var(--txt2);">データがありません</p>';
+    document.getElementById('exp-summary-tbl').innerHTML='<p style="font-size:12px;color:var(--txt2);">数量が記入された商品はありません</p>';
     return;
   }
   
   let tableHTML=`<table style="width:100%;font-size:12px;border-collapse:collapse;"><tr style="font-size:11px;color:var(--txt2);"><td>問屋</td><td style="text-align:right">品目</td><td style="text-align:right">数量</td><td style="text-align:right">金額</td></tr>`;
   tableHTML+=buildSection('商品',shohinData,shohinSum,'var(--cpd)');
   tableHTML+=buildSection('資材',shizaiData,shizaiSum,'var(--cad)');
-  tableHTML+=`<tr style="border-top:2px solid var(--cp);"><td style="padding:10px 0 10px 10px;font-weight:700;color:var(--txt);font-size:13px;">総合計</td><td style="text-align:right;padding:10px 0;font-weight:700;font-size:13px;">${grandTotal.cnt}品目</td><td style="text-align:right;padding:10px 0;font-weight:700;font-size:13px;">${grandTotal.qty}個</td><td style="text-align:right;padding:10px 0;font-weight:700;font-size:14px;color:var(--cp);">¥${Math.round(grandTotal.val).toLocaleString()}</td></tr></table>`;
+  tableHTML+=`<tr style="border-top:2px solid var(--cp);"><td style="padding:10px 0 10px 10px;font-weight:700;color:var(--txt);font-size:13px;">総合計</td><td style="text-align:right;padding:10px 0;font-weight:700;font-size:13px;">${grandTotal.cnt}品目</td><td style="text-align:right;padding:10px 0;font-weight:700;font-size:13px;">${fmtQty(grandTotal.qty)}個</td><td style="text-align:right;padding:10px 0;font-weight:700;font-size:14px;color:var(--cp);">¥${Math.round(grandTotal.val).toLocaleString()}</td></tr></table>`;
   
   document.getElementById('exp-summary-tbl').innerHTML=tableHTML;
 }
@@ -1143,7 +1336,7 @@ function renderExport(){
 function fname(ext){return `棚卸_${curStore}_${today().replace(/\//g,'')}.${ext}`;}
 
 function buildExportData(sep){
-  const rows=allRows();
+  const rows=nonZeroRows();
   const shohin=rows.filter(r=>!isShizai(r.tonya));
   const shizai=rows.filter(r=>isShizai(r.tonya));
   const q=c=>sep==='\t'?'':'"'+c+'"';
@@ -1155,10 +1348,10 @@ function buildExportData(sep){
     if(!data.length)return '';
     let s=`【${title}】\n`;
     s+=`問屋${sep}商品名${sep}単位${sep}原単価${sep}数量${sep}合計金額\n`;
-    s+=data.map(i=>`${q(esc(i.tonya))}${sep}${q(esc(i.name))}${sep}${q(esc(i.unit||''))}${sep}${i.price}${sep}${i.qty}${sep}${Math.round(i.price*i.qty)}`).join('\n');
+    s+=data.map(i=>`${q(esc(i.tonya))}${sep}${q(esc(i.name))}${sep}${q(esc(i.unit||''))}${sep}${i.price}${sep}${fmtQty(i.qty)}${sep}${Math.round(i.price*i.qty)}`).join('\n');
     const sumQty=data.reduce((s,i)=>s+i.qty,0);
     const sumVal=data.reduce((s,i)=>s+(i.price*i.qty),0);
-    s+=`\n${q(title+'小計')}${sep}${sep}${sep}${sep}${sumQty}${sep}${Math.round(sumVal)}\n\n`;
+    s+=`\n${q(title+'小計')}${sep}${sep}${sep}${sep}${fmtQty(sumQty)}${sep}${Math.round(sumVal)}\n\n`;
     return s;
   };
   
@@ -1167,14 +1360,61 @@ function buildExportData(sep){
   
   const totalQty=rows.reduce((s,i)=>s+i.qty,0);
   const totalVal=rows.reduce((s,i)=>s+(i.price*i.qty),0);
-  out+=`${q('総合計')}${sep}${sep}${sep}${sep}${totalQty}${sep}${Math.round(totalVal)}\n`;
+  out+=`${q('総合計')}${sep}${sep}${sep}${sep}${fmtQty(totalQty)}${sep}${Math.round(totalVal)}\n`;
   
   return out;
 }
 
+function escXml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));}
+
+function buildExcelHTML(){
+  const rows=nonZeroRows();
+  const shohin=rows.filter(r=>!isShizai(r.tonya));
+  const shizai=rows.filter(r=>isShizai(r.tonya));
+  
+  let html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>
+    table{border-collapse:collapse;font-family:Arial,"MS Gothic",sans-serif;font-size:11pt;}
+    td,th{border:1px solid #000;padding:5px 8px;vertical-align:middle;}
+    th{background:#D9E1F2;font-weight:bold;text-align:center;}
+    .sec-head{background:#FFE699;font-weight:bold;font-size:13pt;border:2px solid #000;}
+    .subtotal{background:#F2F2F2;font-weight:bold;font-size:13pt;border-top:2px solid #000;border-bottom:2px solid #000;}
+    .grand{background:#C6EFCE;font-weight:bold;font-size:16pt;border:3px solid #000;}
+    .right{text-align:right;mso-number-format:"\\#\\,\\#\\#0";}
+    .ttl{text-align:left;font-weight:bold;}
+    .meta{font-size:11pt;border:1px solid #000;}
+    .meta-lbl{background:#F2F2F2;font-weight:bold;}
+  </style></head><body>`;
+  
+  html+=`<table style="margin-bottom:12px;"><tr><td class="meta meta-lbl">店舗名</td><td class="meta" style="font-weight:bold;font-size:13pt;">${escXml(curStore)}</td></tr><tr><td class="meta meta-lbl">棚卸日</td><td class="meta">${today()}</td></tr></table>`;
+  
+  const mkSection=(title,data)=>{
+    if(!data.length)return '';
+    let h=`<table><tr><td colspan="6" class="sec-head">【${title}】</td></tr>`;
+    h+=`<tr><th>問屋</th><th>商品名</th><th>単位</th><th>原単価</th><th>数量</th><th>合計金額</th></tr>`;
+    data.forEach(i=>{
+      h+=`<tr><td>${escXml(i.tonya)}</td><td>${escXml(i.name)}</td><td style="text-align:center;">${escXml(i.unit||'')}</td><td class="right">${i.price}</td><td class="right">${fmtQty(i.qty)}</td><td class="right">${Math.round(i.price*i.qty)}</td></tr>`;
+    });
+    const sumQty=data.reduce((s,i)=>s+i.qty,0);
+    const sumVal=data.reduce((s,i)=>s+(i.price*i.qty),0);
+    h+=`<tr class="subtotal"><td class="ttl" colspan="4">${title}小計</td><td class="right">${fmtQty(sumQty)}</td><td class="right">${Math.round(sumVal).toLocaleString()}</td></tr>`;
+    h+=`</table><br>`;
+    return h;
+  };
+  
+  html+=mkSection('商品',shohin);
+  html+=mkSection('資材',shizai);
+  
+  const totalQty=rows.reduce((s,i)=>s+i.qty,0);
+  const totalVal=rows.reduce((s,i)=>s+(i.price*i.qty),0);
+  html+=`<table><tr class="grand"><td class="ttl" colspan="4">総合計</td><td class="right">${fmtQty(totalQty)}</td><td class="right">¥${Math.round(totalVal).toLocaleString()}</td></tr></table>`;
+  
+  html+='</body></html>';
+  return html;
+}
+
 function exportCSV(){
-  const rows=allRows();
-  if(!rows.length){toast('データがありません');return;}
+  const rows=nonZeroRows();
+  if(!rows.length){toast('数量が記入された商品がありません');return;}
   const content=buildExportData(',');
   const blob=new Blob(['\uFEFF'+content],{type:'text/csv;charset=utf-8'});
   downloadBlob(blob,fname('csv'));
@@ -1182,9 +1422,9 @@ function exportCSV(){
 }
 
 function exportXLS(){
-  const rows=allRows();
-  if(!rows.length){toast('データがありません');return;}
-  const content=buildExportData('\t');
+  const rows=nonZeroRows();
+  if(!rows.length){toast('数量が記入された商品がありません');return;}
+  const content=buildExcelHTML();
   const blob=new Blob(['\uFEFF'+content],{type:'application/vnd.ms-excel;charset=utf-8'});
   downloadBlob(blob,fname('xls'));
   toast('Excelファイルをダウンロードしました');
@@ -1199,8 +1439,8 @@ function downloadBlob(blob,filename){
 }
 
 function printAll(){
-  const rows=allRows();
-  if(!rows.length){toast('データがありません');return;}
+  const rows=nonZeroRows();
+  if(!rows.length){toast('数量が記入された商品がありません');return;}
   const shohin=rows.filter(r=>!isShizai(r.tonya));
   const shizai=rows.filter(r=>isShizai(r.tonya));
   
@@ -1208,10 +1448,10 @@ function printAll(){
     if(!data.length)return '';
     let h=`<h3 style="color:${color};margin-top:20px;margin-bottom:6px;">【${title}】</h3>`;
     h+=`<table><thead><tr><th>問屋</th><th>商品名</th><th>単位</th><th>原単価</th><th>数量</th><th>合計</th></tr></thead><tbody>`;
-    data.forEach(i=>{h+=`<tr><td>${i.tonya}</td><td>${i.name}</td><td>${i.unit||''}</td><td>¥${i.price.toLocaleString()}</td><td>${i.qty}</td><td>¥${Math.round(i.price*i.qty).toLocaleString()}</td></tr>`;});
+    data.forEach(i=>{h+=`<tr><td>${i.tonya}</td><td>${i.name}</td><td>${i.unit||''}</td><td>¥${i.price.toLocaleString()}</td><td>${fmtQty(i.qty)}</td><td>¥${Math.round(i.price*i.qty).toLocaleString()}</td></tr>`;});
     const sumQty=data.reduce((s,i)=>s+i.qty,0);
     const sumVal=data.reduce((s,i)=>s+(i.price*i.qty),0);
-    h+=`<tr style="background:#f0f0f0;font-weight:bold;"><td colspan="4">${title}小計</td><td>${sumQty}</td><td>¥${Math.round(sumVal).toLocaleString()}</td></tr>`;
+    h+=`<tr style="background:#f0f0f0;font-weight:bold;"><td colspan="4">${title}小計</td><td>${fmtQty(sumQty)}</td><td>¥${Math.round(sumVal).toLocaleString()}</td></tr>`;
     h+='</tbody></table>';
     return h;
   };
@@ -1219,19 +1459,209 @@ function printAll(){
   const totalQty=rows.reduce((s,i)=>s+i.qty,0);
   const totalVal=rows.reduce((s,i)=>s+(i.price*i.qty),0);
   
-  let html=`<html><head><meta charset="utf-8"><title>棚卸リスト</title><style>body{font-family:sans-serif;font-size:13px;padding:20px}h2{margin-bottom:4px}h3{font-size:14px}p{color:#666;font-size:12px;margin-bottom:12px}table{width:100%;border-collapse:collapse;margin-bottom:10px}th,td{border:1px solid #ccc;padding:6px 10px;text-align:left}th{background:#f0f0f0}.grand{margin-top:16px;padding:12px;background:#E1F5EE;border:2px solid #1D9E75;border-radius:6px;font-size:14px;display:flex;justify-content:space-between;}.grand strong{color:#0F6E56;}</style></head><body>`;
+  let html=`<html><head><meta charset="utf-8"><title>棚卸リスト</title><style>
+    body{font-family:sans-serif;font-size:13px;padding:20px;max-width:900px;margin:0 auto;}
+    h2{margin-bottom:4px}h3{font-size:14px}
+    p{color:#666;font-size:12px;margin-bottom:12px}
+    table{width:100%;border-collapse:collapse;margin-bottom:10px}
+    th,td{border:1px solid #ccc;padding:6px 10px;text-align:left}
+    th{background:#f0f0f0}
+    .grand{margin-top:16px;padding:12px;background:#E1F5EE;border:2px solid #1D9E75;border-radius:6px;font-size:14px;display:flex;justify-content:space-between;}
+    .grand strong{color:#0F6E56;}
+    .toolbar{position:sticky;top:0;background:white;padding:10px 0;margin:-20px -20px 16px;padding:12px 20px;border-bottom:1px solid #ddd;display:flex;gap:10px;align-items:center;}
+    .toolbar button{padding:8px 16px;border:1px solid #ccc;border-radius:6px;background:white;cursor:pointer;font-size:13px;}
+    .toolbar .btn-back{background:#f5f5f5;}
+    .toolbar .btn-print{background:#1D9E75;color:white;border-color:#1D9E75;font-weight:bold;}
+    @media print{.toolbar{display:none;}body{padding:0;}}
+  </style></head><body>`;
+  html+=`<div class="toolbar"><button class="btn-back" onclick="window.close()">← 戻る</button><button class="btn-print" onclick="window.print()">🖨 印刷する</button><span style="color:#888;font-size:12px;margin-left:auto;">※ブラウザバック（←）でも戻れます</span></div>`;
   html+=`<h2>棚卸リスト — ${curStore}</h2><p>棚卸日: ${today()}</p>`;
   html+=mkTable('商品',shohin,'#0F6E56');
   html+=mkTable('資材',shizai,'#0C447C');
-  html+=`<div class="grand"><strong>総合計</strong><span>${totalQty}個 / <strong>¥${Math.round(totalVal).toLocaleString()}</strong></span></div>`;
+  html+=`<div class="grand"><strong>総合計</strong><span>${fmtQty(totalQty)}個 / <strong>¥${Math.round(totalVal).toLocaleString()}</strong></span></div>`;
   html+='</body></html>';
   const w=window.open('','_blank');
-  if(w){w.document.write(html); w.document.close(); setTimeout(()=>w.print(),300);}
+  if(w){w.document.write(html); w.document.close();}
   else{toast('ポップアップがブロックされました');}
 }
 
 loadData();
 document.getElementById('login-date').textContent=today();
+
+let xlsxLibLoaded=false;
+let pendingImport=null;
+
+function loadXlsxLib(){
+  return new Promise((resolve,reject)=>{
+    if(xlsxLibLoaded||window.XLSX){xlsxLibLoaded=true;resolve();return;}
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=()=>{xlsxLibLoaded=true;resolve();};
+    s.onerror=()=>reject(new Error('SheetJS読み込み失敗'));
+    document.head.appendChild(s);
+  });
+}
+
+function openMasterModal(){
+  document.getElementById('master-modal').classList.remove('hidden');
+  document.getElementById('master-preview').classList.add('hidden');
+  document.getElementById('master-loading').classList.add('hidden');
+  document.getElementById('xlsx-input').value='';
+  pendingImport=null;
+  loadXlsxLib().catch(e=>toast('Excel読み込み機能の初期化に失敗しました'));
+}
+
+function closeMasterModal(){
+  document.getElementById('master-modal').classList.add('hidden');
+  pendingImport=null;
+}
+
+async function handleXlsxFile(evt){
+  const file=evt.target.files[0];
+  if(!file)return;
+  document.getElementById('master-loading').classList.remove('hidden');
+  document.getElementById('master-preview').classList.add('hidden');
+  try{
+    await loadXlsxLib();
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array'});
+    
+    const imported={};
+    wb.SheetNames.forEach(sheetName=>{
+      if(!TONYAS.includes(sheetName))return;
+      const sheet=wb.Sheets[sheetName];
+      const rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:null});
+      const items=[];
+      for(let i=1;i<rows.length;i++){
+        const row=rows[i];
+        if(!row||row.length<2)continue;
+        const name=row[1]?String(row[1]).trim():'';
+        if(!name)continue;
+        const unit=row[2]?String(row[2]).trim():'';
+        let price=row[3];
+        if(price!=null&&price!==''){
+          price=parseFloat(price);
+          if(isNaN(price))price=0;
+        }else price=0;
+        const caseType=row[4]?String(row[4]).trim():'';
+        let caseQty=row[5];
+        if(caseQty!=null&&caseQty!==''){
+          caseQty=parseInt(caseQty);
+          if(isNaN(caseQty))caseQty=0;
+          if(sheetName==='南給'&&name==='銀鮭トリムC'&&caseQty===18900)caseQty=10;
+        }else caseQty=0;
+        items.push({name,unit,price,caseType,caseQty});
+      }
+      imported[sheetName]=items;
+    });
+    
+    let totalNew=0,totalUpdate=0,totalKeep=0;
+    const detail=[];
+    const plan={};
+    TONYAS.forEach(tonya=>{
+      const existing=master[tonya]||[];
+      const newItems=imported[tonya]||[];
+      if(!newItems.length){
+        plan[tonya]=existing.map(x=>({...x}));
+        totalKeep+=existing.length;
+        return;
+      }
+      const existingByName=new Map();
+      existing.forEach(it=>existingByName.set(it.name,it));
+      const newNames=new Set(newItems.map(n=>n.name));
+      let tAdd=0,tUpd=0,tKeep=0;
+      const merged=[];
+      newItems.forEach(n=>{
+        const ex=existingByName.get(n.name);
+        if(ex){
+          merged.push({...ex,name:n.name,unit:n.unit,price:n.price,caseType:n.caseType,caseQty:n.caseQty});
+          tUpd++;
+        }else{
+          const id=Date.now()+Math.random()*1000+merged.length;
+          merged.push({id,name:n.name,unit:n.unit,price:n.price,caseType:n.caseType,caseQty:n.caseQty});
+          tAdd++;
+        }
+      });
+      existing.forEach(ex=>{
+        if(!newNames.has(ex.name)){
+          merged.push({...ex});
+          tKeep++;
+        }
+      });
+      plan[tonya]=merged;
+      totalNew+=tAdd;totalUpdate+=tUpd;totalKeep+=tKeep;
+      if(tAdd||tUpd){
+        detail.push(`【${tonya}】追加${tAdd} 更新${tUpd} 維持${tKeep}`);
+      }
+    });
+    
+    pendingImport=plan;
+    document.getElementById('master-preview-stats').innerHTML=`
+      🆕 新規追加: <strong>${totalNew}品目</strong><br>
+      🔄 上書き更新: <strong>${totalUpdate}品目</strong><br>
+      ✅ そのまま維持: <strong>${totalKeep}品目</strong>
+    `;
+    document.getElementById('master-preview-detail').textContent=detail.length?detail.join('\n'):'（変更なし）';
+    document.getElementById('master-preview').classList.remove('hidden');
+  }catch(e){
+    console.error(e);
+    toast('ファイル読み込みに失敗しました');
+  }
+  document.getElementById('master-loading').classList.add('hidden');
+}
+
+async function confirmMasterImport(){
+  if(!pendingImport){toast('読み込んだデータがありません');return;}
+  if(!confirm('全店舗の商品マスタを更新します。よろしいですか？'))return;
+  
+  try{
+    toast('更新中... しばらくお待ちください');
+    const { getFirestore, doc, getDoc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    const db=getFirestore();
+    
+    const STORES=['加世田店','川内店','上荒田店','串木野店','鹿屋店','徳之島店','マルヤ店','G鹿屋店','姶良店','真砂店'];
+    
+    for(const storeName of STORES){
+      const ref=doc(db,'stores',storeName);
+      const snap=await getDoc(ref);
+      let storeData;
+      if(snap.exists()){
+        storeData=snap.data();
+      }else{
+        storeData={master:{},invData:{}};
+      }
+      const newMaster={};
+      const newInvData={};
+      TONYAS.forEach(tonya=>{
+        const oldInv=(storeData.invData&&storeData.invData[tonya])||[];
+        const oldInvByName=new Map();
+        oldInv.forEach(it=>oldInvByName.set(it.name,it));
+        const planItems=pendingImport[tonya]||[];
+        newMaster[tonya]=planItems.map(x=>({...x}));
+        newInvData[tonya]=planItems.map(x=>{
+          const prev=oldInvByName.get(x.name);
+          return {...x,qty:prev?prev.qty:0};
+        });
+      });
+      await setDoc(ref,{master:newMaster,invData:newInvData,updatedAt:new Date().toISOString()});
+    }
+    
+    master=JSON.parse(JSON.stringify(pendingImport));
+    invData={};
+    TONYAS.forEach(tonya=>{
+      invData[tonya]=master[tonya].map(x=>({...x,qty:0}));
+    });
+    localStorage.setItem(STORAGE_KEY,JSON.stringify({master,invData}));
+    
+    pendingImport=null;
+    closeMasterModal();
+    toast('✓ 全店舗のマスタを更新しました');
+  }catch(e){
+    console.error(e);
+    toast('⚠ 更新に失敗しました: '+e.message);
+  }
+}
+
 const lastStore=localStorage.getItem('lastStore');
 if(lastStore){
   document.querySelectorAll('.s-store').forEach(btn=>{
