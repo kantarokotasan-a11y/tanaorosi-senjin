@@ -437,6 +437,38 @@ window.cloudUnsubscribe=function(){
 };
 
 window.isRemoteUpdate=()=>isRemoteUpdate;
+
+const { getDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+
+window.cloudUpdateAllStoresMaster=async function(storeNames,planMaster,tonyas){
+  const results=[];
+  for(const storeName of storeNames){
+    try{
+      const ref=doc(db,'stores',storeName);
+      const snap=await getDoc(ref);
+      let storeData=snap.exists()?snap.data():{master:{},invData:{}};
+      const newMaster={};
+      const newInvData={};
+      tonyas.forEach(tonya=>{
+        const oldInv=(storeData.invData&&storeData.invData[tonya])||[];
+        const oldInvByName=new Map();
+        oldInv.forEach(it=>oldInvByName.set(it.name,it));
+        const planItems=planMaster[tonya]||[];
+        newMaster[tonya]=planItems.map(x=>({...x}));
+        newInvData[tonya]=planItems.map(x=>{
+          const prev=oldInvByName.get(x.name);
+          return {...x,qty:prev?prev.qty:0};
+        });
+      });
+      await setDoc(ref,{master:newMaster,invData:newInvData,updatedAt:new Date().toISOString()});
+      results.push({storeName,ok:true});
+    }catch(e){
+      console.error(storeName+' 更新失敗',e);
+      results.push({storeName,ok:false,err:e.message});
+    }
+  }
+  return results;
+};
 </script>
 
 <script>
@@ -1614,48 +1646,36 @@ async function confirmMasterImport(){
   if(!pendingImport){toast('読み込んだデータがありません');return;}
   if(!confirm('全店舗の商品マスタを更新します。よろしいですか？'))return;
   
+  if(!window.cloudUpdateAllStoresMaster){
+    toast('⚠ クラウド接続が準備中です。少し待って再度お試しください');
+    return;
+  }
+  
   try{
-    toast('更新中... しばらくお待ちください');
-    const { getFirestore, doc, getDoc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    const db=getFirestore();
-    
+    toast('更新中... 10〜20秒かかります');
     const STORES=['加世田店','川内店','上荒田店','串木野店','鹿屋店','徳之島店','マルヤ店','G鹿屋店','姶良店','真砂店'];
     
-    for(const storeName of STORES){
-      const ref=doc(db,'stores',storeName);
-      const snap=await getDoc(ref);
-      let storeData;
-      if(snap.exists()){
-        storeData=snap.data();
-      }else{
-        storeData={master:{},invData:{}};
-      }
-      const newMaster={};
-      const newInvData={};
-      TONYAS.forEach(tonya=>{
-        const oldInv=(storeData.invData&&storeData.invData[tonya])||[];
-        const oldInvByName=new Map();
-        oldInv.forEach(it=>oldInvByName.set(it.name,it));
-        const planItems=pendingImport[tonya]||[];
-        newMaster[tonya]=planItems.map(x=>({...x}));
-        newInvData[tonya]=planItems.map(x=>{
-          const prev=oldInvByName.get(x.name);
-          return {...x,qty:prev?prev.qty:0};
-        });
-      });
-      await setDoc(ref,{master:newMaster,invData:newInvData,updatedAt:new Date().toISOString()});
-    }
+    const results=await window.cloudUpdateAllStoresMaster(STORES,pendingImport,TONYAS);
+    const fails=results.filter(r=>!r.ok);
     
     master=JSON.parse(JSON.stringify(pendingImport));
-    invData={};
     TONYAS.forEach(tonya=>{
-      invData[tonya]=master[tonya].map(x=>({...x,qty:0}));
+      const oldInvByName=new Map();
+      (invData[tonya]||[]).forEach(it=>oldInvByName.set(it.name,it));
+      invData[tonya]=master[tonya].map(x=>{
+        const prev=oldInvByName.get(x.name);
+        return {...x,qty:prev?prev.qty:0};
+      });
     });
     localStorage.setItem(STORAGE_KEY,JSON.stringify({master,invData}));
     
     pendingImport=null;
     closeMasterModal();
-    toast('✓ 全店舗のマスタを更新しました');
+    if(fails.length){
+      toast(`⚠ ${results.length-fails.length}/${results.length}店舗のみ更新成功`);
+    }else{
+      toast('✓ 全'+results.length+'店舗のマスタを更新しました');
+    }
   }catch(e){
     console.error(e);
     toast('⚠ 更新に失敗しました: '+e.message);
