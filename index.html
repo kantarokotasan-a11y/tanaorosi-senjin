@@ -175,7 +175,25 @@ html,body{
 </head>
 <body>
 
-<div id="sc-login" class="app">
+<div id="sc-password" class="app" style="display:none;">
+  <div class="logo-wrap" style="margin-top:80px;">
+    <div class="logo-mark">🔒</div>
+    <h1>棚卸アプリ</h1>
+    <p>パスワードを入力してください</p>
+  </div>
+  <div style="padding:0 16px;margin-top:32px;">
+    <input type="password" id="pw-input" placeholder="パスワード" autocomplete="current-password"
+      style="width:100%;padding:14px 16px;font-size:16px;border:1.5px solid var(--border2);border-radius:10px;background:var(--surf);color:var(--txt);outline:none;-webkit-appearance:none;"
+      onkeydown="if(event.key==='Enter')checkPassword()">
+    <button onclick="checkPassword()" 
+      style="width:100%;margin-top:12px;padding:15px;background:var(--cp);color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;">
+      ログイン →
+    </button>
+    <p id="pw-err" style="color:var(--cd);font-size:13px;text-align:center;margin-top:12px;display:none;">パスワードが違います</p>
+  </div>
+</div>
+
+<div id="sc-login" class="app" style="display:none;">
   <div class="logo-wrap">
     <div class="logo-mark">⊞</div>
     <h1>棚卸アプリ</h1>
@@ -1848,6 +1866,38 @@ function printAll(){
 
 loadData();
 document.getElementById('login-date').textContent=today();
+
+const APP_PASSWORD='senjin2026';
+const PW_KEY='inv_app_auth_v1';
+
+function checkPassword(){
+  const input=document.getElementById('pw-input').value.trim();
+  if(input===APP_PASSWORD){
+    localStorage.setItem(PW_KEY,'1');
+    showLoginScreen();
+  }else{
+    document.getElementById('pw-err').style.display='block';
+    document.getElementById('pw-input').value='';
+    document.getElementById('pw-input').focus();
+  }
+}
+
+function showLoginScreen(){
+  document.getElementById('sc-password').style.display='none';
+  document.getElementById('sc-login').style.display='';
+}
+
+function showPasswordScreen(){
+  document.getElementById('sc-password').style.display='';
+  document.getElementById('sc-login').style.display='none';
+  setTimeout(()=>document.getElementById('pw-input').focus(),100);
+}
+
+if(localStorage.getItem(PW_KEY)==='1'){
+  showLoginScreen();
+}else{
+  showPasswordScreen();
+}
 
 let xlsxLibLoaded=false;
 let pendingImport=null;
