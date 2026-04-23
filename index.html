@@ -200,8 +200,12 @@ html,body{
   </div>
   <button class="btn-start" id="btn-start" onclick="startApp()">棚卸を開始 →</button>
   <p class="login-date" id="login-date"></p>
-  <div style="margin-top:24px;padding:0 16px;">
-    <button id="btn-master" style="width:100%;padding:12px;background:transparent;color:var(--txt2);border:1px solid var(--border2);border-radius:10px;font-size:13px;cursor:pointer;" onclick="openMasterModal()">📥 商品マスタをExcelから更新</button>
+  <div style="margin-top:28px;padding:0 16px;">
+    <div style="background:var(--cwl);border:2px solid var(--cw);border-radius:10px;padding:12px;">
+      <p style="font-size:12px;font-weight:600;color:var(--cwd);margin-bottom:6px;">🔧 管理者メニュー</p>
+      <button id="btn-sync-all" style="width:100%;padding:12px;background:var(--cw);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;" onclick="syncAllStoresMaster()">🔄 全店舗に最新マスタを反映</button>
+      <p style="font-size:11px;color:var(--cwd);margin-top:8px;text-align:center;line-height:1.5;">内蔵の最新マスタ（106品目）を<br>全10店舗に一括配布します<br>※棚卸の数量は保持されます</p>
+    </div>
   </div>
 </div>
 
@@ -442,7 +446,7 @@ window.isRemoteUpdate=()=>isRemoteUpdate;
 
 const { getDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
 
-window.cloudUpdateAllStoresMaster=async function(storeNames,planMaster,tonyas){
+window.cloudUpdateAllStoresMaster=async function(storeNames,planMaster,tonyas,masterVersion){
   const results=[];
   for(const storeName of storeNames){
     try{
@@ -452,17 +456,41 @@ window.cloudUpdateAllStoresMaster=async function(storeNames,planMaster,tonyas){
       const newMaster={};
       const newInvData={};
       tonyas.forEach(tonya=>{
+        const oldMaster=(storeData.master&&storeData.master[tonya])||[];
         const oldInv=(storeData.invData&&storeData.invData[tonya])||[];
+        const oldMasterByName=new Map();
+        oldMaster.forEach(it=>oldMasterByName.set(it.name,it));
         const oldInvByName=new Map();
         oldInv.forEach(it=>oldInvByName.set(it.name,it));
         const planItems=planMaster[tonya]||[];
-        newMaster[tonya]=planItems.map(x=>({...x}));
-        newInvData[tonya]=planItems.map(x=>{
-          const prev=oldInvByName.get(x.name);
-          return {...x,qty:prev?prev.qty:0};
+        const planNames=new Set(planItems.map(p=>p.name));
+        
+        const mergedMaster=[];
+        const mergedInv=[];
+        
+        planItems.forEach(p=>{
+          const ex=oldMasterByName.get(p.name);
+          const id=ex?ex.id:p.id;
+          const item={id,name:p.name,unit:p.unit,price:p.price,caseType:p.caseType,caseQty:p.caseQty};
+          mergedMaster.push(item);
+          const prevInv=oldInvByName.get(p.name);
+          mergedInv.push({...item,qty:prevInv?prevInv.qty:0});
         });
+        
+        oldMaster.forEach(ex=>{
+          if(!planNames.has(ex.name)){
+            mergedMaster.push({...ex});
+            const prevInv=oldInvByName.get(ex.name);
+            mergedInv.push({...ex,qty:prevInv?prevInv.qty:0});
+          }
+        });
+        
+        newMaster[tonya]=mergedMaster;
+        newInvData[tonya]=mergedInv;
       });
-      await setDoc(ref,{master:newMaster,invData:newInvData,updatedAt:new Date().toISOString()});
+      const payload={master:newMaster,invData:newInvData,updatedAt:new Date().toISOString()};
+      if(masterVersion)payload.masterVersion=masterVersion;
+      await setDoc(ref,payload);
       results.push({storeName,ok:true});
     }catch(e){
       console.error(storeName+' 更新失敗',e);
@@ -1842,6 +1870,51 @@ function openMasterModal(){
   document.getElementById('xlsx-input').value='';
   pendingImport=null;
   loadXlsxLib().catch(e=>toast('Excel読み込み機能の初期化に失敗しました'));
+}
+
+async function syncAllStoresMaster(){
+  if(!window.cloudUpdateAllStoresMaster){
+    toast('⚠ クラウド接続が準備中です。10秒ほど待って再度お試しください');
+    return;
+  }
+  if(!confirm('全10店舗の商品マスタを最新版に更新します。\n(棚卸の数量は保持されます)\n\nよろしいですか？'))return;
+  
+  const btn=document.getElementById('btn-sync-all');
+  const originalText=btn.textContent;
+  btn.disabled=true;
+  btn.textContent='⏳ 更新中... しばらくお待ちください';
+  
+  try{
+    const STORES=['加世田店','川内店','上荒田店','串木野店','鹿屋店','徳之島店','マルヤ店','G鹿屋店','姶良店','真砂店'];
+    const planMaster={};
+    TONYAS.forEach(tonya=>{
+      const seedItems=DEFAULT_SEED[tonya]||[];
+      planMaster[tonya]=seedItems.map((s,i)=>({
+        id:Date.now()+Math.random()*1000+i,
+        name:s.name,
+        unit:s.unit||'',
+        price:s.price||0,
+        caseType:s.caseType||'',
+        caseQty:s.caseQty||0
+      }));
+    });
+    
+    const results=await window.cloudUpdateAllStoresMaster(STORES,planMaster,TONYAS,MASTER_VERSION);
+    const fails=results.filter(r=>!r.ok);
+    
+    btn.disabled=false;
+    btn.textContent=originalText;
+    if(fails.length){
+      alert(`⚠ 一部失敗しました\n成功: ${results.length-fails.length}店舗\n失敗: ${fails.length}店舗\n\n失敗した店舗:\n${fails.map(f=>f.storeName).join(', ')}`);
+    }else{
+      alert(`✓ 全${results.length}店舗のマスタを更新しました！\nどの店舗を開いても最新のマスタが表示されます`);
+    }
+  }catch(e){
+    console.error(e);
+    btn.disabled=false;
+    btn.textContent=originalText;
+    alert('⚠ 更新に失敗しました: '+e.message);
+  }
 }
 
 function closeMasterModal(){
