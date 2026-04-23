@@ -398,11 +398,13 @@ window.cloudSave=function(storeName,data){
   syncTimer=setTimeout(async()=>{
     try{
       showSync('☁ 保存中...');
-      await setDoc(doc(db,'stores',storeName),{
+      const payload={
         master:data.master,
         invData:data.invData,
         updatedAt:new Date().toISOString()
-      });
+      };
+      if(data.masterVersion)payload.masterVersion=data.masterVersion;
+      await setDoc(doc(db,'stores',storeName),payload);
       showSync('✓ 同期完了');
     }catch(e){
       console.error('保存エラー',e);
@@ -552,147 +554,147 @@ const DEFAULT_SEED={
     {
       "name": "サヨリスライス",
       "unit": "枚",
-      "price": 0,
+      "price": 30.0,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "ツブ貝スライス7ｇ",
       "unit": "枚",
-      "price": 0,
+      "price": 56.0,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "ツブ貝スライスS",
       "unit": "枚",
-      "price": 0,
+      "price": 42.5,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "トラウトスライス6ｇ",
       "unit": "枚",
-      "price": 0,
+      "price": 24.5,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "トラウトスライス7ｇ",
       "unit": "枚",
-      "price": 0,
+      "price": 27.25,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "トラウトスライス10ｇ",
       "unit": "枚",
-      "price": 0,
+      "price": 42.0,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "生ハラススライス",
       "unit": "枚",
-      "price": 0,
+      "price": 30.0,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "アトラン焼きハラススライス",
       "unit": "枚",
-      "price": 0,
+      "price": 32.0,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "水タコスライス",
       "unit": "枚",
-      "price": 0,
+      "price": 39.0,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "タコスライスNE5ｇ",
       "unit": "枚",
-      "price": 0,
+      "price": 24.0,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "タコスライスNE6ｇ",
       "unit": "枚",
-      "price": 0,
+      "price": 27.5,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "赤エビ開き7L",
       "unit": "枚",
-      "price": 0,
+      "price": 80.0,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "赤エビ開き5L",
       "unit": "枚",
-      "price": 0,
+      "price": 57.5,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "ブランチ生エビ2L",
       "unit": "枚",
-      "price": 0,
+      "price": 29.0,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "ブランチ生エビ4L",
       "unit": "枚",
-      "price": 0,
+      "price": 44.0,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "V頭肉寿司エビ5LH",
       "unit": "枚",
-      "price": 0,
+      "price": 29.0,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "V頭肉寿司エビ6LH",
       "unit": "枚",
-      "price": 0,
+      "price": 32.0,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "V頭肉寿司エビ7LH",
       "unit": "枚",
-      "price": 0,
+      "price": 38.0,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "V頭肉寿司エビ8LH",
       "unit": "枚",
-      "price": 0,
+      "price": 44.0,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "V寿司エビ2L",
       "unit": "枚",
-      "price": 0,
+      "price": 19.5,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "V寿司エビ5L",
       "unit": "枚",
-      "price": 0,
+      "price": 31.5,
       "caseType": "袋",
       "caseQty": 20
     },
@@ -706,14 +708,14 @@ const DEFAULT_SEED={
     {
       "name": "穴子スライス5ｇ",
       "unit": "枚",
-      "price": 0,
+      "price": 24.25,
       "caseType": "袋",
       "caseQty": 20
     },
     {
       "name": "穴子スライス7ｇ",
       "unit": "枚",
-      "price": 0,
+      "price": 34.5,
       "caseType": "袋",
       "caseQty": 20
     },
@@ -797,28 +799,28 @@ const DEFAULT_SEED={
     {
       "name": "イカ糸造り",
       "unit": "パック",
-      "price": 0,
+      "price": 210.0,
       "caseType": "ケース",
       "caseQty": 12
     },
     {
       "name": "ゴロっと丼",
       "unit": "パック",
-      "price": 0,
+      "price": 280.0,
       "caseType": "ケース",
       "caseQty": 6
     },
     {
       "name": "切れてるしめさば",
       "unit": "パック",
-      "price": 0,
+      "price": 140.0,
       "caseType": "ケース",
       "caseQty": 20
     },
     {
       "name": "いそっこ",
       "unit": "パック",
-      "price": 0,
+      "price": 150.0,
       "caseType": "ケース",
       "caseQty": 8
     }
@@ -844,6 +846,62 @@ const DEFAULT_SEED={
       "price": 350.0,
       "caseType": "ケース",
       "caseQty": 20
+    },
+    {
+      "name": "マグロタタキ",
+      "unit": "パック",
+      "price": 350.0,
+      "caseType": "ケース",
+      "caseQty": 9
+    },
+    {
+      "name": "タレ丸干し",
+      "unit": "パック",
+      "price": 90.0,
+      "caseType": "ケース",
+      "caseQty": 20
+    },
+    {
+      "name": "ウニ数の子",
+      "unit": "パック",
+      "price": 240.0,
+      "caseType": "ケース",
+      "caseQty": 12
+    },
+    {
+      "name": "しそ昆布",
+      "unit": "パック",
+      "price": 260.0,
+      "caseType": "ケース",
+      "caseQty": 20
+    },
+    {
+      "name": "つぼ漬け昆布",
+      "unit": "パック",
+      "price": 210.0,
+      "caseType": "ケース",
+      "caseQty": 12
+    },
+    {
+      "name": "カットわかめ",
+      "unit": "袋",
+      "price": 100.0,
+      "caseType": "",
+      "caseQty": 0
+    },
+    {
+      "name": "青さのり",
+      "unit": "袋",
+      "price": 220.0,
+      "caseType": "",
+      "caseQty": 0
+    },
+    {
+      "name": "ムキエビ",
+      "unit": "袋",
+      "price": 900.0,
+      "caseType": "ケース",
+      "caseQty": 20
     }
   ],
   "セイカ": [
@@ -867,6 +925,27 @@ const DEFAULT_SEED={
       "price": 280.0,
       "caseType": "ケース",
       "caseQty": 12
+    },
+    {
+      "name": "ヤリイカリング",
+      "unit": "㎏",
+      "price": 1600.0,
+      "caseType": "ケース",
+      "caseQty": 10
+    },
+    {
+      "name": "まるごとエビフライ",
+      "unit": "パック",
+      "price": 375.0,
+      "caseType": "ケース",
+      "caseQty": 10
+    },
+    {
+      "name": "サクサクエビフライ",
+      "unit": "パック",
+      "price": 260.0,
+      "caseType": "ケース",
+      "caseQty": 20
     }
   ],
   "マルタカ": [
@@ -915,6 +994,13 @@ const DEFAULT_SEED={
       "price": 295.0,
       "caseType": "ケース",
       "caseQty": 10
+    },
+    {
+      "name": "サバ開き",
+      "unit": "袋",
+      "price": 260.0,
+      "caseType": "ケース",
+      "caseQty": 20
     }
   ],
   "市場": [
@@ -942,18 +1028,179 @@ const DEFAULT_SEED={
   ],
   "中央包装": [
     {
-      "name": "FLB-A15-30",
+      "name": "ＦＬＢ－Ａ１１－３０",
       "unit": "枚",
-      "price": 5.5,
+      "price": 3.69,
       "caseType": "袋",
       "caseQty": 100
     },
     {
-      "name": "APFC-Y10-30",
+      "name": "ＦＬＢ－Ａ１５－３０",
       "unit": "枚",
-      "price": 10.5,
+      "price": 4.78,
       "caseType": "袋",
       "caseQty": 100
+    },
+    {
+      "name": "ＦＬＢ－Ｙ１０－２５",
+      "unit": "枚",
+      "price": 4.09,
+      "caseType": "袋",
+      "caseQty": 100
+    },
+    {
+      "name": "ＦＬＢ－Ｙ１３－３０",
+      "unit": "枚",
+      "price": 5.84,
+      "caseType": "袋",
+      "caseQty": 100
+    },
+    {
+      "name": "ＦＬＢ－Ｙ１８－３３",
+      "unit": "枚",
+      "price": 7.66,
+      "caseType": "袋",
+      "caseQty": 100
+    },
+    {
+      "name": "ＦＬＢ－Ｋ１０－２５",
+      "unit": "枚",
+      "price": 5.13,
+      "caseType": "袋",
+      "caseQty": 100
+    },
+    {
+      "name": "ＦＬＢ－Ｋ１３－２５",
+      "unit": "枚",
+      "price": 7.58,
+      "caseType": "袋",
+      "caseQty": 100
+    },
+    {
+      "name": "ＦＬＢ－Ｋ２３－３６(ＣＪ－１同サイズ)",
+      "unit": "枚",
+      "price": 16.95,
+      "caseType": "袋",
+      "caseQty": 100
+    },
+    {
+      "name": "ＦＬＢ－Ｍ２１－３０",
+      "unit": "枚",
+      "price": 9.97,
+      "caseType": "袋",
+      "caseQty": 100
+    },
+    {
+      "name": "ＦＬＢ－Ｖ１２－３０",
+      "unit": "枚",
+      "price": 2.93,
+      "caseType": "袋",
+      "caseQty": 100
+    },
+    {
+      "name": "ＡＰＦＣ－Ａ１１－３０　エコ",
+      "unit": "枚",
+      "price": 4.1,
+      "caseType": "袋",
+      "caseQty": 100
+    },
+    {
+      "name": "ＡＰＦＣ－Ａ１３－３０（Ｍ２７）エコ",
+      "unit": "枚",
+      "price": 7.51,
+      "caseType": "袋",
+      "caseQty": 100
+    },
+    {
+      "name": "ＡＰＦＣ－Ｙ１０－３０　エコ",
+      "unit": "枚",
+      "price": 7.82,
+      "caseType": "袋",
+      "caseQty": 100
+    },
+    {
+      "name": "ＡＰＦＣ－Ｙ１２－３０　エコ",
+      "unit": "枚",
+      "price": 8.59,
+      "caseType": "袋",
+      "caseQty": 100
+    },
+    {
+      "name": "ＡＣ２５－１４Ｆ(ＡＰＦＣ－Ｙ１４－３０)",
+      "unit": "枚",
+      "price": 11.39,
+      "caseType": "袋",
+      "caseQty": 100
+    },
+    {
+      "name": "ＡＰＦＣ－Ｋ１０－３０　エコ",
+      "unit": "枚",
+      "price": 12.57,
+      "caseType": "袋",
+      "caseQty": 100
+    },
+    {
+      "name": "ＡＰＦＣ－Ｖ１２－３０　エコ",
+      "unit": "枚",
+      "price": 5.67,
+      "caseType": "袋",
+      "caseQty": 100
+    },
+    {
+      "name": "ＦＵ　３３－１０　木目葉らん",
+      "unit": "枚",
+      "price": 16.4,
+      "caseType": "袋",
+      "caseQty": 50
+    },
+    {
+      "name": "ＦＵ　３３－１４　ひのき",
+      "unit": "枚",
+      "price": 21.46,
+      "caseType": "袋",
+      "caseQty": 50
+    },
+    {
+      "name": "ＦＵ　３７－１２　木目葉らん",
+      "unit": "枚",
+      "price": 21.76,
+      "caseType": "袋",
+      "caseQty": 50
+    },
+    {
+      "name": "ＡＰＦＣ１２５－２３０Ｓ",
+      "unit": "枚",
+      "price": 10.15,
+      "caseType": "袋",
+      "caseQty": 100
+    },
+    {
+      "name": "Ｔ－ＡＰＦＣ１２５フタ",
+      "unit": "枚",
+      "price": 9.87,
+      "caseType": "袋",
+      "caseQty": 50
+    },
+    {
+      "name": "ＦＬ扇折小(３０)網ブルー",
+      "unit": "枚",
+      "price": 19.61,
+      "caseType": "袋",
+      "caseQty": 50
+    },
+    {
+      "name": "ＡＰベジＢＯＸ１００－２００本体(珍味用)",
+      "unit": "枚",
+      "price": 6.83,
+      "caseType": "袋",
+      "caseQty": 50
+    },
+    {
+      "name": "Ｔ－ＡＰベジＢＯＸ１００ＦＳフタ(珍味用)",
+      "unit": "枚",
+      "price": 6.83,
+      "caseType": "袋",
+      "caseQty": 50
     }
   ],
   "山崎": [
@@ -1033,16 +1280,70 @@ function loadData(){
   saveData();
 }
 
+const MASTER_VERSION='2026-04-23-v2';
+
+function mergeWithDefaultSeed(cloudMaster,cloudInvData){
+  const newMaster={};
+  const newInvData={};
+  TONYAS.forEach(tonya=>{
+    const seedItems=DEFAULT_SEED[tonya]||[];
+    const cloudItems=(cloudMaster&&cloudMaster[tonya])||[];
+    const cloudInv=(cloudInvData&&cloudInvData[tonya])||[];
+    
+    const cloudByName=new Map();
+    cloudItems.forEach(it=>cloudByName.set(it.name,it));
+    const invByName=new Map();
+    cloudInv.forEach(it=>invByName.set(it.name,it));
+    
+    const seedNames=new Set(seedItems.map(s=>s.name));
+    const merged=[];
+    const mergedInv=[];
+    
+    seedItems.forEach((s,i)=>{
+      const existing=cloudByName.get(s.name);
+      const prevInv=invByName.get(s.name);
+      const id=existing?existing.id:(Date.now()+Math.random()*1000+i);
+      const item={id,name:s.name,unit:s.unit||'',price:s.price||0,caseType:s.caseType||'',caseQty:s.caseQty||0};
+      merged.push(item);
+      mergedInv.push({...item,qty:prevInv?prevInv.qty:0});
+    });
+    
+    cloudItems.forEach(ci=>{
+      if(!seedNames.has(ci.name)){
+        merged.push({...ci});
+        const prevInv=invByName.get(ci.name);
+        mergedInv.push({...ci,qty:prevInv?prevInv.qty:0});
+      }
+    });
+    
+    newMaster[tonya]=merged;
+    newInvData[tonya]=mergedInv;
+  });
+  return {master:newMaster,invData:newInvData};
+}
+
 function applyCloudData(d){
   if(!d){
     initDefaultData();
   }else{
-    master=d.master||{};
-    invData=d.invData||{};
-    TONYAS.forEach(t=>{
-      if(!master[t])master[t]=[];
-      if(!invData[t])invData[t]=[];
-    });
+    const cloudVersion=d.masterVersion||'';
+    if(cloudVersion!==MASTER_VERSION){
+      const merged=mergeWithDefaultSeed(d.master,d.invData);
+      master=merged.master;
+      invData=merged.invData;
+      setTimeout(()=>{
+        if(curStore&&window.cloudSave){
+          window.cloudSave(curStore,{master,invData,masterVersion:MASTER_VERSION});
+        }
+      },300);
+    }else{
+      master=d.master||{};
+      invData=d.invData||{};
+      TONYAS.forEach(t=>{
+        if(!master[t])master[t]=[];
+        if(!invData[t])invData[t]=[];
+      });
+    }
   }
   try{localStorage.setItem(STORAGE_KEY,JSON.stringify({master,invData}));}catch(e){}
   if(document.getElementById('sc-app') && !document.getElementById('sc-app').classList.contains('hidden')){
@@ -1061,7 +1362,7 @@ function saveData(){
     localStorage.setItem(STORAGE_KEY,JSON.stringify({master,invData}));
   }catch(e){console.error('保存失敗',e);}
   if(curStore && window.cloudSave && !(window.isRemoteUpdate && window.isRemoteUpdate())){
-    window.cloudSave(curStore,{master,invData});
+    window.cloudSave(curStore,{master,invData,masterVersion:MASTER_VERSION});
   }
 }
 
