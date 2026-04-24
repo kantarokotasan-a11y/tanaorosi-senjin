@@ -391,18 +391,18 @@ html,body{
 
 <div class="toast" id="toast"></div>
 
-<div id="scan-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
-  <div style="background:var(--surf);border-radius:12px;max-width:440px;width:100%;padding:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+<div id="scan-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:200;display:flex;flex-direction:column;padding:12px;overflow-y:auto;">
+  <div style="background:var(--surf);border-radius:12px;max-width:600px;width:100%;margin:0 auto 10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
     <h2 style="font-size:16px;font-weight:600;color:var(--txt);">📷 バーコードをスキャン</h2>
-    <button onclick="closeScanModal()" style="background:none;border:none;font-size:24px;color:var(--txt2);cursor:pointer;line-height:1;">×</button>
+    <button onclick="closeScanModal()" style="background:none;border:none;font-size:28px;color:var(--txt2);cursor:pointer;line-height:1;">×</button>
   </div>
-  <div id="scan-mode-info" style="background:rgba(255,255,255,0.1);color:white;padding:8px 16px;border-radius:99px;font-size:12px;margin-bottom:12px;"></div>
-  <div id="scan-camera-wrap" style="width:100%;max-width:440px;background:black;border-radius:12px;overflow:hidden;aspect-ratio:4/3;position:relative;">
+  <div id="scan-mode-info" style="background:rgba(255,255,255,0.15);color:white;padding:8px 16px;border-radius:99px;font-size:12px;margin:0 auto 10px;max-width:600px;text-align:center;width:100%;"></div>
+  <div id="scan-camera-wrap" style="width:100%;max-width:600px;margin:0 auto;background:black;border-radius:12px;overflow:hidden;position:relative;aspect-ratio:1/1;">
     <div id="scan-reader" style="width:100%;height:100%;"></div>
-    <div style="position:absolute;top:50%;left:10%;right:10%;height:2px;background:rgba(255,0,0,0.7);transform:translateY(-50%);pointer-events:none;"></div>
   </div>
+  <p style="color:white;font-size:12px;text-align:center;margin:8px auto;max-width:600px;opacity:0.8;">💡 バーコード全体が赤枠内に収まるようにしてください<br>10〜20cmの距離で、明るい場所で試してください</p>
   <input id="scan-hid-input" type="text" style="position:fixed;top:-100px;left:0;opacity:0;" autocomplete="off">
-  <div id="scan-manual" style="background:var(--surf);border-radius:10px;padding:12px;margin-top:12px;max-width:440px;width:100%;">
+  <div id="scan-manual" style="background:var(--surf);border-radius:10px;padding:12px;margin:0 auto 10px;max-width:600px;width:100%;">
     <p style="font-size:11px;color:var(--txt2);margin-bottom:6px;">手動入力 / Bluetoothスキャナー</p>
     <div style="display:flex;gap:6px;">
       <input type="text" id="scan-manual-input" placeholder="JANコードを入力" inputmode="numeric" style="flex:1;padding:10px;font-size:15px;border:1px solid var(--border2);border-radius:8px;background:var(--bg);color:var(--txt);" onkeydown="if(event.key==='Enter')submitManualJan()">
@@ -2353,7 +2353,10 @@ function loadHtml5Qrcode(){
     if(window.Html5Qrcode){resolve(window.Html5Qrcode);return;}
     const s=document.createElement('script');
     s.src='https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js';
-    s.onload=()=>resolve(window.Html5Qrcode);
+    s.onload=()=>{
+      window.Html5QrcodeSupportedFormats=window.Html5QrcodeSupportedFormats||(window.Html5Qrcode&&window.Html5Qrcode.Html5QrcodeSupportedFormats);
+      resolve(window.Html5Qrcode);
+    };
     s.onerror=()=>reject(new Error('バーコード読取ライブラリの読込失敗'));
     document.head.appendChild(s);
   });
@@ -2373,18 +2376,49 @@ async function openScanModal(mode,targetProductName){
   
   try{
     const Html5Qrcode=await loadHtml5Qrcode();
+    const SupportedFormats=window.Html5QrcodeSupportedFormats||{};
     if(html5QrInstance){
       try{await html5QrInstance.stop();}catch(e){}
       html5QrInstance=null;
     }
-    html5QrInstance=new Html5Qrcode('scan-reader');
-    const config={fps:10,qrbox:{width:280,height:140},aspectRatio:1.33};
+    const instanceConfig={verbose:false};
+    if(SupportedFormats.EAN_13!==undefined){
+      instanceConfig.formatsToSupport=[
+        SupportedFormats.EAN_13,
+        SupportedFormats.EAN_8,
+        SupportedFormats.UPC_A,
+        SupportedFormats.UPC_E,
+        SupportedFormats.CODE_128,
+        SupportedFormats.CODE_39,
+        SupportedFormats.ITF,
+        SupportedFormats.QR_CODE
+      ];
+    }
+    html5QrInstance=new Html5Qrcode('scan-reader',instanceConfig);
+    const config={
+      fps:15,
+      aspectRatio:1.0,
+      disableFlip:false,
+      videoConstraints:{
+        facingMode:'environment',
+        width:{ideal:1920,min:1280},
+        height:{ideal:1080,min:720}
+      }
+    };
     await html5QrInstance.start(
-      {facingMode:'environment'},
+      {facingMode:{exact:'environment'}},
       config,
       (decodedText)=>onScanSuccess(decodedText),
       ()=>{}
-    );
+    ).catch(async(e)=>{
+      console.log('exact environment失敗、ideal再試行',e);
+      await html5QrInstance.start(
+        {facingMode:'environment'},
+        config,
+        (decodedText)=>onScanSuccess(decodedText),
+        ()=>{}
+      );
+    });
   }catch(e){
     console.error('カメラ起動エラー',e);
     toast('カメラが使えません。手動入力してください');

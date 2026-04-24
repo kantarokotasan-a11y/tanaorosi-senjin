@@ -1,4 +1,4 @@
-const CACHE='inv-app-v18';
+const CACHE='inv-app-v19';
 const FILES=['./manifest.json','./icon-192.png','./icon-512.png'];
 
 self.addEventListener('install',e=>{
