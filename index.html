@@ -303,6 +303,7 @@ html,body{
 
     <div class="panel active" id="panel-tonya">
       <div id="view-tonya-list">
+        <button onclick="openScanModal('search')" style="width:100%;padding:14px;background:linear-gradient(135deg,#1D9E75,#0F6E56);color:white;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;box-shadow:0 2px 6px rgba(29,158,117,0.3);">📷 バーコードをスキャンして商品検索</button>
         <div class="tonya-card all-card" onclick="showTab('all')">
           <div>
             <div class="tc-name">🔍 全商品を見る / 検索</div>
@@ -369,6 +370,15 @@ html,body{
         <h3 style="margin-bottom:10px;">問屋別サマリー</h3>
         <div id="exp-summary-tbl" style="font-size:13px;"></div>
       </div>
+      <div class="exp-card" style="border:2px solid var(--cd);background:rgba(226,75,74,0.05);">
+        <h3 style="color:var(--cd);">⚠️ 数値をリセット</h3>
+        <p style="font-size:12px;color:var(--txt2);margin-bottom:14px;line-height:1.6;">
+          現在の店舗（<strong id="reset-store-name" style="color:var(--txt);"></strong>）の<br>
+          全商品の数量を<strong style="color:var(--cd);">0にリセット</strong>します。<br>
+          商品マスタは残ります。元に戻せません。
+        </p>
+        <button class="btn-exp" style="background:var(--cd);color:white;" onclick="resetAllQty()">🗑 この店舗の数値をすべてリセット</button>
+      </div>
     </div>
 
     <div class="bnav">
@@ -380,6 +390,71 @@ html,body{
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div id="scan-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--surf);border-radius:12px;max-width:440px;width:100%;padding:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+    <h2 style="font-size:16px;font-weight:600;color:var(--txt);">📷 バーコードをスキャン</h2>
+    <button onclick="closeScanModal()" style="background:none;border:none;font-size:24px;color:var(--txt2);cursor:pointer;line-height:1;">×</button>
+  </div>
+  <div id="scan-mode-info" style="background:rgba(255,255,255,0.1);color:white;padding:8px 16px;border-radius:99px;font-size:12px;margin-bottom:12px;"></div>
+  <div id="scan-camera-wrap" style="width:100%;max-width:440px;background:black;border-radius:12px;overflow:hidden;aspect-ratio:4/3;position:relative;">
+    <div id="scan-reader" style="width:100%;height:100%;"></div>
+    <div style="position:absolute;top:50%;left:10%;right:10%;height:2px;background:rgba(255,0,0,0.7);transform:translateY(-50%);pointer-events:none;"></div>
+  </div>
+  <input id="scan-hid-input" type="text" style="position:fixed;top:-100px;left:0;opacity:0;" autocomplete="off">
+  <div id="scan-manual" style="background:var(--surf);border-radius:10px;padding:12px;margin-top:12px;max-width:440px;width:100%;">
+    <p style="font-size:11px;color:var(--txt2);margin-bottom:6px;">手動入力 / Bluetoothスキャナー</p>
+    <div style="display:flex;gap:6px;">
+      <input type="text" id="scan-manual-input" placeholder="JANコードを入力" inputmode="numeric" style="flex:1;padding:10px;font-size:15px;border:1px solid var(--border2);border-radius:8px;background:var(--bg);color:var(--txt);" onkeydown="if(event.key==='Enter')submitManualJan()">
+      <button onclick="submitManualJan()" style="padding:10px 16px;background:var(--cp);color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;">確定</button>
+    </div>
+  </div>
+</div>
+
+<div id="qty-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:210;display:flex;align-items:flex-end;justify-content:center;">
+  <div style="background:var(--surf);border-radius:16px 16px 0 0;max-width:480px;width:100%;padding:20px 16px 24px;animation:slideUp 0.25s ease;">
+    <div style="width:40px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 14px;"></div>
+    <div id="qty-modal-product" style="margin-bottom:16px;">
+      <div id="qty-modal-name" style="font-size:16px;font-weight:600;color:var(--txt);line-height:1.4;margin-bottom:4px;"></div>
+      <div id="qty-modal-info" style="font-size:12px;color:var(--txt2);"></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:10px;">
+      <button onclick="qtyModalChange(-1)" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--border2);background:var(--surf);color:var(--txt);font-size:22px;cursor:pointer;font-weight:600;">−</button>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="text" id="qty-modal-input" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" style="width:90px;padding:8px;font-size:22px;font-weight:600;text-align:center;border:1px solid var(--border2);border-radius:8px;background:var(--bg);color:var(--txt);">
+        <span id="qty-modal-unit" style="font-size:13px;color:var(--txt2);min-width:24px;"></span>
+      </div>
+      <button onclick="qtyModalChange(+1)" style="width:40px;height:40px;border-radius:50%;border:1px solid var(--border2);background:var(--surf);color:var(--txt);font-size:22px;cursor:pointer;font-weight:600;">＋</button>
+    </div>
+    <div id="qty-modal-case-wrap" style="display:flex;gap:6px;margin-bottom:10px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="closeQtyModal()" style="flex:1;padding:13px;background:var(--surf2);color:var(--txt);border:1px solid var(--border2);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">閉じる</button>
+      <button onclick="confirmQtyModal()" style="flex:2;padding:13px;background:var(--cp);color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">✓ 保存して次へ</button>
+    </div>
+  </div>
+</div>
+
+<div id="jan-register-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:205;display:flex;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--surf);border-radius:12px;max-width:400px;width:100%;padding:20px;">
+    <h3 style="font-size:16px;font-weight:600;color:var(--txt);margin-bottom:10px;">JANコードを登録</h3>
+    <div id="jan-register-product" style="font-size:14px;color:var(--txt2);margin-bottom:14px;padding:10px;background:var(--bg);border-radius:8px;"></div>
+    <p style="font-size:12px;color:var(--txt2);margin-bottom:10px;">商品のバーコードをスキャンするか、手動入力してください</p>
+    <div style="display:flex;gap:6px;margin-bottom:12px;">
+      <input type="text" id="jan-register-input" placeholder="JANコード" inputmode="numeric" style="flex:1;padding:10px;font-size:15px;border:1px solid var(--border2);border-radius:8px;background:var(--bg);color:var(--txt);">
+      <button onclick="openCameraForJanRegister()" style="padding:10px 14px;background:var(--ca);color:white;border:none;border-radius:8px;font-size:13px;cursor:pointer;white-space:nowrap;">📷</button>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="closeJanRegisterModal()" style="flex:1;padding:12px;background:var(--surf2);color:var(--txt);border:1px solid var(--border2);border-radius:8px;font-size:13px;cursor:pointer;">キャンセル</button>
+      <button onclick="confirmJanRegister()" style="flex:2;padding:12px;background:var(--cp);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">✓ 登録する</button>
+    </div>
+    <div id="jan-register-current" style="margin-top:10px;font-size:11px;color:var(--txt3);text-align:center;"></div>
+  </div>
+</div>
+
+<style>
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.case-btn-q{flex:1;padding:8px 6px;border-radius:6px;border:1px solid var(--border);background:var(--cwl);color:var(--cwd);font-size:11px;font-weight:600;cursor:pointer;}
+</style>
 
 <div id="sync-indicator" style="position:fixed;top:env(safe-area-inset-top);right:10px;z-index:30;font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(29,158,117,0.9);color:white;opacity:0;transition:opacity 0.3s;pointer-events:none;">同期中...</div>
 
@@ -498,14 +573,6 @@ window.cloudUpdateAllStoresMaster=async function(storeNames,planMaster,tonyas,ma
           mergedInv.push({...item,qty:prevInv?prevInv.qty:0});
         });
         
-        oldMaster.forEach(ex=>{
-          if(!planNames.has(ex.name)){
-            mergedMaster.push({...ex});
-            const prevInv=oldInvByName.get(ex.name);
-            mergedInv.push({...ex,qty:prevInv?prevInv.qty:0});
-          }
-        });
-        
         newMaster[tonya]=mergedMaster;
         newInvData[tonya]=mergedInv;
       });
@@ -520,6 +587,30 @@ window.cloudUpdateAllStoresMaster=async function(storeNames,planMaster,tonyas,ma
   }
   return results;
 };
+
+let janUnsubscribe=null;
+window.cloudSubscribeJan=function(onData){
+  if(janUnsubscribe){janUnsubscribe();janUnsubscribe=null;}
+  janUnsubscribe=onSnapshot(doc(db,'shared','janMap'),(snap)=>{
+    if(snap.exists()){
+      onData(snap.data().map||{});
+    }else{
+      onData({});
+    }
+  },(err)=>{
+    console.error('JAN購読エラー',err);
+  });
+};
+
+window.cloudSaveJan=async function(map){
+  try{
+    await setDoc(doc(db,'shared','janMap'),{map,updatedAt:new Date().toISOString()});
+    return true;
+  }catch(e){
+    console.error('JAN保存エラー',e);
+    return false;
+  }
+};
 </script>
 
 <script>
@@ -527,6 +618,8 @@ const TONYAS=['マリンフーズ','南給','あじかん','イケワキ','セ�
 const SHIZAI_TONYAS=['中央包装','山崎'];
 const isShizai=(t)=>SHIZAI_TONYAS.includes(t);
 const STORAGE_KEY='inventory_app_v3';
+const JAN_STORAGE_KEY='inventory_jan_map_v1';
+let janMap={};
 
 const DEFAULT_SEED={
   "マリンフーズ": [
@@ -785,14 +878,14 @@ const DEFAULT_SEED={
     {
       "name": "シーフード串",
       "unit": "袋",
-      "price": 1350.0,
+      "price": 1400.0,
       "caseType": "ケース",
       "caseQty": 10
     },
     {
       "name": "エビフライ６尾",
       "unit": "パック",
-      "price": 400.0,
+      "price": 370.0,
       "caseType": "ケース",
       "caseQty": 20
     },
@@ -813,14 +906,14 @@ const DEFAULT_SEED={
     {
       "name": "中華わかめ",
       "unit": "㎏",
-      "price": 0,
+      "price": 1080.0,
       "caseType": "",
       "caseQty": 0
     },
     {
       "name": "ホタテひも",
       "unit": "㎏",
-      "price": 0,
+      "price": 1760.0,
       "caseType": "",
       "caseQty": 0
     },
@@ -872,6 +965,20 @@ const DEFAULT_SEED={
       "price": 150.0,
       "caseType": "ケース",
       "caseQty": 8
+    },
+    {
+      "name": "ホタテ貝柱 5S",
+      "unit": "㎏",
+      "price": 6700.0,
+      "caseType": "",
+      "caseQty": 0
+    },
+    {
+      "name": "カツオタタキ",
+      "unit": "㎏",
+      "price": 1450.0,
+      "caseType": "ケース",
+      "caseQty": 3
     }
   ],
   "イケワキ": [
@@ -920,7 +1027,7 @@ const DEFAULT_SEED={
     {
       "name": "しそ昆布",
       "unit": "パック",
-      "price": 260.0,
+      "price": 265.0,
       "caseType": "ケース",
       "caseQty": 20
     },
@@ -978,23 +1085,79 @@ const DEFAULT_SEED={
     {
       "name": "ヤリイカリング",
       "unit": "㎏",
-      "price": 1600.0,
+      "price": 1500.0,
       "caseType": "ケース",
       "caseQty": 10
     },
     {
       "name": "まるごとエビフライ",
       "unit": "パック",
-      "price": 375.0,
+      "price": 370.0,
       "caseType": "ケース",
       "caseQty": 10
     },
     {
       "name": "サクサクエビフライ",
       "unit": "パック",
-      "price": 260.0,
+      "price": 265.0,
       "caseType": "ケース",
       "caseQty": 20
+    },
+    {
+      "name": "ぶっかけ塩辛",
+      "unit": "パック",
+      "price": 250.0,
+      "caseType": "ケース",
+      "caseQty": 6
+    },
+    {
+      "name": "イカソーメン",
+      "unit": "パック",
+      "price": 280.0,
+      "caseType": "ケース",
+      "caseQty": 25
+    },
+    {
+      "name": "味付きメカブ",
+      "unit": "パック",
+      "price": 90.0,
+      "caseType": "ケース",
+      "caseQty": 10
+    },
+    {
+      "name": "シャキシャキ茎わかめ",
+      "unit": "パック",
+      "price": 160.0,
+      "caseType": "ケース",
+      "caseQty": 10
+    },
+    {
+      "name": "朝飯メカブ",
+      "unit": "パック",
+      "price": 150.0,
+      "caseType": "ケース",
+      "caseQty": 6
+    },
+    {
+      "name": "3連モズク",
+      "unit": "パック",
+      "price": 90.0,
+      "caseType": "ケース",
+      "caseQty": 12
+    },
+    {
+      "name": "中華クラゲ",
+      "unit": "パック",
+      "price": 230.0,
+      "caseType": "ケース",
+      "caseQty": 12
+    },
+    {
+      "name": "ほっけ開き",
+      "unit": "パック",
+      "price": 290.0,
+      "caseType": "",
+      "caseQty": 0
     }
   ],
   "マルタカ": [
@@ -1008,16 +1171,30 @@ const DEFAULT_SEED={
     {
       "name": "サバ生姜",
       "unit": "パック",
-      "price": 330.0,
+      "price": 344.0,
       "caseType": "ケース",
       "caseQty": 12
+    },
+    {
+      "name": "マルトモカツオパック",
+      "unit": "パック",
+      "price": 86.0,
+      "caseType": "ケース",
+      "caseQty": 20
+    },
+    {
+      "name": "いか焼売",
+      "unit": "パック",
+      "price": 220.0,
+      "caseType": "ケース",
+      "caseQty": 10
     }
   ],
   "あじかん": [
     {
       "name": "玉子7ｍｍ",
       "unit": "枚",
-      "price": 25.0,
+      "price": 23.0,
       "caseType": "袋",
       "caseQty": 24
     }
@@ -1033,7 +1210,7 @@ const DEFAULT_SEED={
     {
       "name": "ホッケみりん",
       "unit": "パック",
-      "price": 280.0,
+      "price": 285.0,
       "caseType": "ケース",
       "caseQty": 16
     },
@@ -1050,6 +1227,48 @@ const DEFAULT_SEED={
       "price": 260.0,
       "caseType": "ケース",
       "caseQty": 20
+    },
+    {
+      "name": "赤魚フィーレ 50枚",
+      "unit": "枚",
+      "price": 120.4,
+      "caseType": "ケース",
+      "caseQty": 50
+    },
+    {
+      "name": "昆布サバ開き",
+      "unit": "袋",
+      "price": 263.0,
+      "caseType": "ケース",
+      "caseQty": 20
+    },
+    {
+      "name": "サバ開き 2枚",
+      "unit": "袋",
+      "price": 250.0,
+      "caseType": "ケース",
+      "caseQty": 20
+    },
+    {
+      "name": "ネギトロ芯50ｇ",
+      "unit": "本",
+      "price": 166.0,
+      "caseType": "袋",
+      "caseQty": 10
+    },
+    {
+      "name": "ロールイカ半筒",
+      "unit": "パック",
+      "price": 240.0,
+      "caseType": "ケース",
+      "caseQty": 20
+    },
+    {
+      "name": "骨取りサバフィーレ",
+      "unit": "枚",
+      "price": 149.0,
+      "caseType": "ケース",
+      "caseQty": 50
     }
   ],
   "市場": [
@@ -1073,6 +1292,174 @@ const DEFAULT_SEED={
       "price": 220.0,
       "caseType": "ケース",
       "caseQty": 20
+    },
+    {
+      "name": "16/20",
+      "unit": "尾",
+      "price": 41.0,
+      "caseType": "枚",
+      "caseQty": 72
+    },
+    {
+      "name": "21/25",
+      "unit": "尾",
+      "price": 28.0,
+      "caseType": "枚",
+      "caseQty": 92
+    },
+    {
+      "name": "31/40",
+      "unit": "kg",
+      "price": 1173.0,
+      "caseType": "枚",
+      "caseQty": 1
+    },
+    {
+      "name": "赤エビL2",
+      "unit": "尾",
+      "price": 75.6,
+      "caseType": "枚",
+      "caseQty": 50
+    },
+    {
+      "name": "定塩銀鮭",
+      "unit": "㎏",
+      "price": 1500.0,
+      "caseType": "ケース",
+      "caseQty": 10
+    },
+    {
+      "name": "トラウトトリムE",
+      "unit": "㎏",
+      "price": 2612.0,
+      "caseType": "ケース",
+      "caseQty": 10
+    },
+    {
+      "name": "昆布サバフィーレ",
+      "unit": "枚",
+      "price": 163.0,
+      "caseType": "ケース",
+      "caseQty": 46
+    },
+    {
+      "name": "からふとししゃも",
+      "unit": "㎏",
+      "price": 645.0,
+      "caseType": "ケース",
+      "caseQty": 5
+    },
+    {
+      "name": "ししゃもⓅ（メス）",
+      "unit": "パック",
+      "price": 273.0,
+      "caseType": "ケース",
+      "caseQty": 24
+    },
+    {
+      "name": "ししゃもⓅ（オス）",
+      "unit": "パック",
+      "price": 245.0,
+      "caseType": "ケース",
+      "caseQty": 24
+    },
+    {
+      "name": "焼き明太子",
+      "unit": "パック",
+      "price": 212.0,
+      "caseType": "ボール",
+      "caseQty": 8
+    },
+    {
+      "name": "辛子明太子　バラ子Ⓟ",
+      "unit": "パック",
+      "price": 189.0,
+      "caseType": "ボール",
+      "caseQty": 8
+    },
+    {
+      "name": "辛子明太子　あご落とし　９０ｇ",
+      "unit": "パック",
+      "price": 284.0,
+      "caseType": "ケース",
+      "caseQty": 12
+    },
+    {
+      "name": "青のり　150ｇ",
+      "unit": "パック",
+      "price": 78.0,
+      "caseType": "ケース",
+      "caseQty": 30
+    },
+    {
+      "name": "味付もずく（黒酢・三杯酢）",
+      "unit": "パック",
+      "price": 89.0,
+      "caseType": "ケース",
+      "caseQty": 15
+    },
+    {
+      "name": "煮だこ",
+      "unit": "㎏",
+      "price": 2112.0,
+      "caseType": "ケース",
+      "caseQty": 5
+    },
+    {
+      "name": "ボイルヤリイカ",
+      "unit": "㎏",
+      "price": 1667.0,
+      "caseType": "ケース",
+      "caseQty": 3
+    },
+    {
+      "name": "鮭ハラス",
+      "unit": "㎏",
+      "price": 1200.0,
+      "caseType": "ケース",
+      "caseQty": 12
+    },
+    {
+      "name": "まかない　あじフライ",
+      "unit": "パック",
+      "price": 300.0,
+      "caseType": "ケース",
+      "caseQty": 20
+    },
+    {
+      "name": "まかない　カキフライ",
+      "unit": "パック",
+      "price": 300.0,
+      "caseType": "ケース",
+      "caseQty": 12
+    },
+    {
+      "name": "まかない　イカリングフライ",
+      "unit": "パック",
+      "price": 312.0,
+      "caseType": "ケース",
+      "caseQty": 20
+    },
+    {
+      "name": "まかない　カニクリームコロッケ",
+      "unit": "パック",
+      "price": 312.0,
+      "caseType": "ケース",
+      "caseQty": 12
+    },
+    {
+      "name": "まかない　白身フライ",
+      "unit": "パック",
+      "price": 312.0,
+      "caseType": "ケース",
+      "caseQty": 20
+    },
+    {
+      "name": "鮭フレーク　１本",
+      "unit": "本",
+      "price": 423.0,
+      "caseType": "ケース",
+      "caseQty": 12
     }
   ],
   "中央包装": [
@@ -1278,8 +1665,8 @@ const DEFAULT_SEED={
     },
     {
       "name": "エビチリ（ダイショー）",
-      "unit": "",
-      "price": 0,
+      "unit": "袋",
+      "price": 151.0,
       "caseType": "",
       "caseQty": 0
     },
@@ -1289,6 +1676,20 @@ const DEFAULT_SEED={
       "price": 0,
       "caseType": "",
       "caseQty": 0
+    },
+    {
+      "name": "ミニ醤油（キンコー）",
+      "unit": "袋",
+      "price": 2.8,
+      "caseType": "ケース",
+      "caseQty": 2000
+    },
+    {
+      "name": "蒲焼のたれ",
+      "unit": "本",
+      "price": 85.0,
+      "caseType": "ケース",
+      "caseQty": 30
     }
   ]
 };
@@ -1322,14 +1723,67 @@ function loadData(){
         if(!master[t])master[t]=[];
         if(!invData[t])invData[t]=[];
       });
-      return;
     }catch(e){console.error(e);}
   }
-  initDefaultData();
-  saveData();
+  if(!Object.keys(master).length){
+    initDefaultData();
+    saveData();
+  }
+  try{
+    const j=localStorage.getItem(JAN_STORAGE_KEY);
+    if(j)janMap=JSON.parse(j)||{};
+  }catch(e){console.error(e);}
+  if(window.cloudSubscribeJan){
+    window.cloudSubscribeJan((cloudMap)=>{
+      janMap=cloudMap||{};
+      try{localStorage.setItem(JAN_STORAGE_KEY,JSON.stringify(janMap));}catch(e){}
+      if(document.getElementById('panel-tonya')){
+        if(curTonya&&document.getElementById('view-tonya-detail')&&!document.getElementById('view-tonya-detail').classList.contains('hidden')){
+          renderInvList();
+        }
+        if(document.getElementById('panel-all')&&document.getElementById('panel-all').classList.contains('active')){
+          renderAllList();
+        }
+      }
+    });
+  }
 }
 
-const MASTER_VERSION='2026-04-23-v2';
+async function saveJanMap(){
+  try{localStorage.setItem(JAN_STORAGE_KEY,JSON.stringify(janMap));}catch(e){}
+  if(window.cloudSaveJan){
+    await window.cloudSaveJan(janMap);
+  }
+}
+
+function findProductByJan(jan){
+  const productName=janMap[jan];
+  if(!productName)return null;
+  for(const tonya of TONYAS){
+    const item=(invData[tonya]||[]).find(i=>i.name===productName);
+    if(item)return {item,tonya};
+  }
+  return null;
+}
+
+function getJanForProduct(productName){
+  for(const [jan,name] of Object.entries(janMap)){
+    if(name===productName)return jan;
+  }
+  return null;
+}
+
+function setJanForProduct(jan,productName){
+  for(const [existingJan,name] of Object.entries(janMap)){
+    if(name===productName&&existingJan!==jan){
+      delete janMap[existingJan];
+    }
+  }
+  janMap[jan]=productName;
+  saveJanMap();
+}
+
+const MASTER_VERSION='2026-04-24-v3';
 
 function mergeWithDefaultSeed(cloudMaster,cloudInvData){
   const newMaster={};
@@ -1344,7 +1798,6 @@ function mergeWithDefaultSeed(cloudMaster,cloudInvData){
     const invByName=new Map();
     cloudInv.forEach(it=>invByName.set(it.name,it));
     
-    const seedNames=new Set(seedItems.map(s=>s.name));
     const merged=[];
     const mergedInv=[];
     
@@ -1355,14 +1808,6 @@ function mergeWithDefaultSeed(cloudMaster,cloudInvData){
       const item={id,name:s.name,unit:s.unit||'',price:s.price||0,caseType:s.caseType||'',caseQty:s.caseQty||0};
       merged.push(item);
       mergedInv.push({...item,qty:prevInv?prevInv.qty:0});
-    });
-    
-    cloudItems.forEach(ci=>{
-      if(!seedNames.has(ci.name)){
-        merged.push({...ci});
-        const prevInv=invByName.get(ci.name);
-        mergedInv.push({...ci,qty:prevInv?prevInv.qty:0});
-      }
     });
     
     newMaster[tonya]=merged;
@@ -1584,12 +2029,17 @@ function itemCardHtml(i,tonya,showTonya){
       <button class="case-btn case-btn-minus" onclick="addByCase(${i.id},-1,'${tonya}')">−1${i.caseType}</button>
       <button class="case-btn" onclick="addByCase(${i.id},1,'${tonya}')">＋1${i.caseType} <span class="sub">(${i.caseQty})</span></button>
     </div>`:'';
+  const janCode=getJanForProduct(i.name);
+  const janBtn=janCode
+    ?`<button onclick="openJanRegisterModal('${escapeAttr(i.name)}')" style="background:rgba(29,158,117,0.1);color:var(--cpd);border:1px solid var(--cp);padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;">✓ JAN: ${janCode}</button>`
+    :`<button onclick="openJanRegisterModal('${escapeAttr(i.name)}')" style="background:none;color:var(--txt2);border:1px dashed var(--border2);padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;">📷 JANを登録</button>`;
   return `<div class="inv-item">
     <div class="inv-item-top">
       <div style="flex:1;min-width:0;">
         <div class="inv-name">${escapeHtml(i.name)}</div>
         <div class="inv-price">${priceStr}${caseInfo}</div>
         ${showTonya?`<span class="tonya-pill">${tonya}</span>`:''}
+        <div style="margin-top:6px;">${janBtn}</div>
       </div>
       <button class="del-btn" onclick="delItem(${i.id},'${tonya}')">削除</button>
     </div>
@@ -1613,6 +2063,8 @@ function itemCardHtml(i,tonya,showTonya){
     ${caseBtns}
   </div>`;
 }
+
+function escapeAttr(s){return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 
 function renderFilterBar(){
   const bar=document.getElementById('filter-bar');
@@ -1676,6 +2128,8 @@ function nonZeroRows(){return allRows().filter(i=>i.qty>0);}
 function renderExport(){
   const all=nonZeroRows();
   document.getElementById('exp-summary').textContent=all.length?`${curStore} — 数量記入済み ${all.length}品目`:`${curStore} — 数量が記入された商品はありません`;
+  const resetEl=document.getElementById('reset-store-name');
+  if(resetEl)resetEl.textContent=curStore;
   
   const makeRows=(filterFn)=>{
     return TONYAS.filter(t=>{
@@ -1716,6 +2170,23 @@ function renderExport(){
 }
 
 function fname(ext){return `棚卸_${curStore}_${today().replace(/\//g,'')}.${ext}`;}
+
+function resetAllQty(){
+  if(!curStore){toast('店舗が選択されていません');return;}
+  const totalItems=Object.values(invData).flat().filter(i=>i.qty>0).length;
+  if(totalItems===0){toast('リセットする数値がありません');return;}
+  if(!confirm(`【${curStore}】の ${totalItems}品目の数量を全て0にリセットします。\n\n本当によろしいですか？\n（この操作は元に戻せません）`))return;
+  if(!confirm(`最終確認：\n${curStore} の全数量をリセットしてよろしいですか？`))return;
+  
+  TONYAS.forEach(t=>{
+    (invData[t]||[]).forEach(i=>{i.qty=0;});
+  });
+  
+  saveData();
+  updateStats();
+  renderExport();
+  toast('✓ 全数量をリセットしました');
+}
 
 function buildExportData(sep){
   const rows=nonZeroRows();
@@ -1869,6 +2340,260 @@ function printAll(){
 
 loadData();
 document.getElementById('login-date').textContent=today();
+
+let html5QrLib=null;
+let html5QrInstance=null;
+let scanMode='search';
+let scanTargetProduct=null;
+let hidBuffer='';
+let hidLastTime=0;
+
+function loadHtml5Qrcode(){
+  return new Promise((resolve,reject)=>{
+    if(window.Html5Qrcode){resolve(window.Html5Qrcode);return;}
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js';
+    s.onload=()=>resolve(window.Html5Qrcode);
+    s.onerror=()=>reject(new Error('バーコード読取ライブラリの読込失敗'));
+    document.head.appendChild(s);
+  });
+}
+
+async function openScanModal(mode,targetProductName){
+  scanMode=mode||'search';
+  scanTargetProduct=targetProductName||null;
+  document.getElementById('scan-modal').classList.remove('hidden');
+  document.getElementById('scan-mode-info').textContent=
+    scanMode==='register'?`📝 「${targetProductName}」のJANを登録`:'🔍 バーコードから商品を検索';
+  document.getElementById('scan-manual-input').value='';
+  
+  hidBuffer='';
+  hidLastTime=0;
+  document.addEventListener('keydown',hidKeyHandler);
+  
+  try{
+    const Html5Qrcode=await loadHtml5Qrcode();
+    if(html5QrInstance){
+      try{await html5QrInstance.stop();}catch(e){}
+      html5QrInstance=null;
+    }
+    html5QrInstance=new Html5Qrcode('scan-reader');
+    const config={fps:10,qrbox:{width:280,height:140},aspectRatio:1.33};
+    await html5QrInstance.start(
+      {facingMode:'environment'},
+      config,
+      (decodedText)=>onScanSuccess(decodedText),
+      ()=>{}
+    );
+  }catch(e){
+    console.error('カメラ起動エラー',e);
+    toast('カメラが使えません。手動入力してください');
+  }
+}
+
+async function closeScanModal(){
+  document.removeEventListener('keydown',hidKeyHandler);
+  if(html5QrInstance){
+    try{await html5QrInstance.stop();}catch(e){}
+    try{await html5QrInstance.clear();}catch(e){}
+    html5QrInstance=null;
+  }
+  document.getElementById('scan-modal').classList.add('hidden');
+}
+
+function hidKeyHandler(e){
+  if(document.getElementById('scan-manual-input')===document.activeElement)return;
+  if(document.getElementById('jan-register-input')===document.activeElement)return;
+  const now=Date.now();
+  if(now-hidLastTime>100)hidBuffer='';
+  hidLastTime=now;
+  if(e.key==='Enter'){
+    if(hidBuffer.length>=4){
+      const code=hidBuffer;
+      hidBuffer='';
+      e.preventDefault();
+      onScanSuccess(code);
+    }
+  }else if(e.key.length===1){
+    hidBuffer+=e.key;
+  }
+}
+
+function submitManualJan(){
+  const v=document.getElementById('scan-manual-input').value.trim();
+  if(!v)return;
+  onScanSuccess(v);
+}
+
+function onScanSuccess(code){
+  code=String(code).trim();
+  if(!code)return;
+  try{if(navigator.vibrate)navigator.vibrate(80);}catch(e){}
+  playBeep();
+  
+  if(scanMode==='register'){
+    if(scanTargetProduct){
+      document.getElementById('jan-register-input').value=code;
+      closeScanModal();
+      openJanRegisterModal(scanTargetProduct,code);
+    }
+  }else{
+    const found=findProductByJan(code);
+    closeScanModal();
+    if(found){
+      openQtyModal(found.item,found.tonya);
+    }else{
+      toast('⚠ 未登録のJAN: '+code);
+      if(confirm('このJANコードは未登録です。\n商品を選んで紐付けますか？\n\nJAN: '+code)){
+        promptProductSelectForJan(code);
+      }
+    }
+  }
+}
+
+function playBeep(){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const osc=ctx.createOscillator();
+    const gain=ctx.createGain();
+    osc.connect(gain);gain.connect(ctx.destination);
+    osc.frequency.value=1800;
+    osc.type='sine';
+    gain.gain.setValueAtTime(0.2,ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01,ctx.currentTime+0.1);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime+0.1);
+  }catch(e){}
+}
+
+function promptProductSelectForJan(jan){
+  const allProducts=[];
+  TONYAS.forEach(t=>{
+    (master[t]||[]).forEach(m=>allProducts.push({name:m.name,tonya:t}));
+  });
+  const term=prompt('商品名（の一部）を入力してください');
+  if(!term)return;
+  const matches=allProducts.filter(p=>p.name.toLowerCase().includes(term.toLowerCase()));
+  if(matches.length===0){toast('該当する商品がありません');return;}
+  if(matches.length>10){toast('候補が多すぎます。もっと具体的に');return;}
+  const choices=matches.map((p,i)=>`${i+1}. [${p.tonya}] ${p.name}`).join('\n');
+  const idx=prompt('番号を入力してください:\n\n'+choices);
+  const n=parseInt(idx);
+  if(!n||n<1||n>matches.length)return;
+  const picked=matches[n-1];
+  setJanForProduct(jan,picked.name);
+  const found=findProductByJan(jan);
+  if(found)openQtyModal(found.item,found.tonya);
+}
+
+let qtyModalContext=null;
+
+function openQtyModal(item,tonya){
+  qtyModalContext={item,tonya};
+  document.getElementById('qty-modal-name').textContent=item.name;
+  const info=[];
+  if(item.price)info.push(`原単価 ¥${item.price.toLocaleString()}`);
+  if(item.unit)info.push(item.unit);
+  if(item.caseType&&item.caseQty)info.push(`1${item.caseType}=${item.caseQty}${item.unit||'個'}`);
+  document.getElementById('qty-modal-info').textContent=info.join(' / ')+` (${tonya})`;
+  document.getElementById('qty-modal-input').value=fmtQty(item.qty);
+  document.getElementById('qty-modal-unit').textContent=item.unit||'';
+  const caseWrap=document.getElementById('qty-modal-case-wrap');
+  if(item.caseType&&item.caseQty){
+    caseWrap.innerHTML=`
+      <button class="case-btn-q" onclick="qtyModalChange(-${item.caseQty})">−1${item.caseType}</button>
+      <button class="case-btn-q" onclick="qtyModalChange(-0.5)">−0.5</button>
+      <button class="case-btn-q" onclick="qtyModalChange(0.5)">+0.5</button>
+      <button class="case-btn-q" onclick="qtyModalChange(${item.caseQty})">+1${item.caseType}(${item.caseQty})</button>`;
+    caseWrap.style.display='flex';
+  }else{
+    caseWrap.innerHTML=`
+      <button class="case-btn-q" onclick="qtyModalChange(-0.5)">−0.5</button>
+      <button class="case-btn-q" onclick="qtyModalChange(-0.1)">−0.1</button>
+      <button class="case-btn-q" onclick="qtyModalChange(0.1)">+0.1</button>
+      <button class="case-btn-q" onclick="qtyModalChange(0.5)">+0.5</button>`;
+    caseWrap.style.display='flex';
+  }
+  document.getElementById('qty-modal').classList.remove('hidden');
+  setTimeout(()=>{
+    const inp=document.getElementById('qty-modal-input');
+    inp.focus();inp.select();
+  },100);
+}
+
+function qtyModalChange(delta){
+  const inp=document.getElementById('qty-modal-input');
+  const cur=parseFloat(inp.value)||0;
+  const next=Math.max(0,Math.round((cur+delta)*100)/100);
+  inp.value=fmtQty(next);
+}
+
+function confirmQtyModal(){
+  if(!qtyModalContext)return;
+  const {item,tonya}=qtyModalContext;
+  const val=parseFloat(document.getElementById('qty-modal-input').value)||0;
+  const target=invData[tonya].find(i=>i.id===item.id);
+  if(target){
+    target.qty=Math.max(0,val);
+    saveData();
+    updateStats();
+    if(!document.getElementById('view-tonya-detail').classList.contains('hidden')){
+      renderInvList();
+    }
+    if(document.getElementById('panel-all').classList.contains('active')){
+      renderAllList();
+    }
+    toast(`✓ ${item.name} を ${fmtQty(target.qty)}${item.unit||''} に更新`);
+  }
+  closeQtyModal();
+  setTimeout(()=>openScanModal('search'),300);
+}
+
+function closeQtyModal(){
+  document.getElementById('qty-modal').classList.add('hidden');
+  qtyModalContext=null;
+}
+
+let janRegisterContext=null;
+
+function openJanRegisterModal(productName,prefilledJan){
+  janRegisterContext={productName};
+  document.getElementById('jan-register-product').textContent=productName;
+  const curJan=getJanForProduct(productName);
+  document.getElementById('jan-register-input').value=prefilledJan||curJan||'';
+  document.getElementById('jan-register-current').textContent=
+    curJan?`現在のJAN: ${curJan}（上書きされます）`:'';
+  document.getElementById('jan-register-modal').classList.remove('hidden');
+  setTimeout(()=>document.getElementById('jan-register-input').focus(),100);
+}
+
+function closeJanRegisterModal(){
+  document.getElementById('jan-register-modal').classList.add('hidden');
+  janRegisterContext=null;
+}
+
+function openCameraForJanRegister(){
+  if(!janRegisterContext)return;
+  const productName=janRegisterContext.productName;
+  closeJanRegisterModal();
+  openScanModal('register',productName);
+}
+
+function confirmJanRegister(){
+  if(!janRegisterContext)return;
+  const jan=document.getElementById('jan-register-input').value.trim();
+  if(!jan){toast('JANコードを入力してください');return;}
+  const existingProduct=janMap[jan];
+  if(existingProduct&&existingProduct!==janRegisterContext.productName){
+    if(!confirm(`このJANは既に「${existingProduct}」に紐付いています。\n「${janRegisterContext.productName}」に変更しますか？`))return;
+  }
+  setJanForProduct(jan,janRegisterContext.productName);
+  toast(`✓ JAN登録: ${jan}`);
+  const productName=janRegisterContext.productName;
+  closeJanRegisterModal();
+  if(!document.getElementById('view-tonya-detail').classList.contains('hidden'))renderInvList();
+  if(document.getElementById('panel-all').classList.contains('active'))renderAllList();
+}
 
 const APP_PASSWORD='senjin2026';
 const PW_KEY='inv_app_auth_v2';
