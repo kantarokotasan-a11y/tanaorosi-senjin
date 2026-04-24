@@ -221,6 +221,7 @@ html,body{
   </div>
   <button class="btn-start" id="btn-start" onclick="startApp()">棚卸を開始 →</button>
   <p class="login-date" id="login-date"></p>
+  <p id="jan-debug" style="text-align:center;font-size:11px;color:var(--txt3);margin-top:6px;"></p>
   <div style="margin-top:28px;padding:0 16px;">
     <div style="background:var(--cwl);border:2px solid var(--cw);border-radius:10px;padding:12px;">
       <p style="font-size:12px;font-weight:600;color:var(--cwd);margin-bottom:6px;">🔧 管理者メニュー</p>
@@ -1758,10 +1759,23 @@ function loadData(){
     const j=localStorage.getItem(JAN_STORAGE_KEY);
     if(j)janMap=JSON.parse(j)||{};
   }catch(e){console.error(e);}
+  
+  subscribeJanWithRetry();
+}
+
+let janSubscribed=false;
+function subscribeJanWithRetry(attempt){
+  attempt=attempt||0;
+  if(janSubscribed)return;
   if(window.cloudSubscribeJan){
+    janSubscribed=true;
+    console.log('JAN購読開始');
     window.cloudSubscribeJan((cloudMap)=>{
+      console.log('JAN受信',Object.keys(cloudMap||{}).length,'件');
       janMap=cloudMap||{};
       try{localStorage.setItem(JAN_STORAGE_KEY,JSON.stringify(janMap));}catch(e){}
+      const dbg=document.getElementById('jan-debug');
+      if(dbg)dbg.textContent=`JAN登録数: ${Object.keys(janMap).length}件 (最終同期: ${new Date().toLocaleTimeString('ja-JP')})`;
       if(document.getElementById('panel-tonya')){
         if(curTonya&&document.getElementById('view-tonya-detail')&&!document.getElementById('view-tonya-detail').classList.contains('hidden')){
           renderInvList();
@@ -1771,6 +1785,10 @@ function loadData(){
         }
       }
     });
+  }else if(attempt<20){
+    setTimeout(()=>subscribeJanWithRetry(attempt+1),200);
+  }else{
+    console.warn('cloudSubscribeJan取得失敗');
   }
 }
 
@@ -1915,6 +1933,7 @@ function startApp(){
       }
     });
   }
+  if(!janSubscribed)subscribeJanWithRetry();
   renderTonyaGrid(); updateStats();
 }
 
