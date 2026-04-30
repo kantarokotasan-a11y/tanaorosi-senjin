@@ -640,9 +640,11 @@ window.cloudSaveJan=async function(map){
 </script>
 
 <script>
-const TONYAS=['マリンフーズ','南給','あじかん','イケワキ','セイカ','マルタカ','中央包装','山崎','市場','フレッシュ青果','その他'];
+const TONYAS=['マリンフーズ','南給','あじかん','イケワキ','セイカ','マルタカ','中央包装','山崎','市場','フレッシュ青果','鮮魚','その他'];
 const SHIZAI_TONYAS=['中央包装','山崎'];
+const SENGYO_TONYA='鮮魚';
 const isShizai=(t)=>SHIZAI_TONYAS.includes(t);
+const isSengyo=(t)=>t===SENGYO_TONYA;
 const STORAGE_KEY='inventory_app_v3';
 const JAN_STORAGE_KEY='inventory_jan_map_v1';
 let janMap={};
@@ -1717,6 +1719,28 @@ const DEFAULT_SEED={
       "caseType": "ケース",
       "caseQty": 30
     }
+  ],
+  "鮮魚": [
+    {"name": "鮮魚1", "unit": "", "price": 0, "caseType": "", "caseQty": 0},
+    {"name": "鮮魚2", "unit": "", "price": 0, "caseType": "", "caseQty": 0},
+    {"name": "鮮魚3", "unit": "", "price": 0, "caseType": "", "caseQty": 0},
+    {"name": "鮮魚4", "unit": "", "price": 0, "caseType": "", "caseQty": 0},
+    {"name": "鮮魚5", "unit": "", "price": 0, "caseType": "", "caseQty": 0},
+    {"name": "鮮魚6", "unit": "", "price": 0, "caseType": "", "caseQty": 0},
+    {"name": "鮮魚7", "unit": "", "price": 0, "caseType": "", "caseQty": 0},
+    {"name": "鮮魚8", "unit": "", "price": 0, "caseType": "", "caseQty": 0},
+    {"name": "鮮魚9", "unit": "", "price": 0, "caseType": "", "caseQty": 0},
+    {"name": "鮮魚10", "unit": "", "price": 0, "caseType": "", "caseQty": 0},
+    {"name": "鮮魚11", "unit": "", "price": 0, "caseType": "", "caseQty": 0},
+    {"name": "鮮魚12", "unit": "", "price": 0, "caseType": "", "caseQty": 0},
+    {"name": "鮮魚13", "unit": "", "price": 0, "caseType": "", "caseQty": 0},
+    {"name": "鮮魚14", "unit": "", "price": 0, "caseType": "", "caseQty": 0},
+    {"name": "鮮魚15", "unit": "", "price": 0, "caseType": "", "caseQty": 0},
+    {"name": "鮮魚16", "unit": "", "price": 0, "caseType": "", "caseQty": 0},
+    {"name": "鮮魚17", "unit": "", "price": 0, "caseType": "", "caseQty": 0},
+    {"name": "鮮魚18", "unit": "", "price": 0, "caseType": "", "caseQty": 0},
+    {"name": "鮮魚19", "unit": "", "price": 0, "caseType": "", "caseQty": 0},
+    {"name": "鮮魚20", "unit": "", "price": 0, "caseType": "", "caseQty": 0}
   ]
 };
 
@@ -1826,7 +1850,7 @@ function setJanForProduct(jan,productName){
   saveJanMap();
 }
 
-const MASTER_VERSION='2026-04-24-v3';
+const MASTER_VERSION='2026-04-24-v4-sengyo';
 
 function mergeWithDefaultSeed(cloudMaster,cloudInvData){
   const newMaster={};
@@ -2080,6 +2104,12 @@ function itemCardHtml(i,tonya,showTonya){
   const barcodeBtn=janCode
     ?`<button onclick="openBarcodeShow('${escapeAttr(i.name)}','${tonya}')" style="background:rgba(24,95,165,0.08);color:var(--cad);border:1px solid var(--ca);padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;margin-left:6px;">🖨 表示</button>`
     :`<button onclick="issueBarcodeForProduct('${escapeAttr(i.name)}','${tonya}')" style="background:rgba(239,159,39,0.1);color:var(--cwd);border:1px solid var(--cw);padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;margin-left:6px;">🖨 発行</button>`;
+  const priceEditRow=isSengyo(tonya)?`
+    <div style="display:flex;align-items:center;gap:8px;background:#FFF8E7;border:1px solid #EF9F27;border-radius:8px;padding:8px 12px;margin-top:8px;">
+      <span style="font-size:11px;color:#854F0B;font-weight:600;white-space:nowrap;">💰 単価</span>
+      <input type="text" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" value="${i.price||''}" placeholder="0" style="flex:1;padding:6px 8px;font-size:14px;border:1px solid #EF9F27;border-radius:6px;background:white;color:#1a1a1a;" onchange="setSengyoPrice(${i.id},this.value,'${tonya}')">
+      <span style="font-size:11px;color:#854F0B;">円</span>
+    </div>`:'';
   return `<div class="inv-item">
     <div class="inv-item-top">
       <div style="flex:1;min-width:0;">
@@ -2090,7 +2120,8 @@ function itemCardHtml(i,tonya,showTonya){
       </div>
       <button class="del-btn" onclick="delItem(${i.id},'${tonya}')">削除</button>
     </div>
-    <div class="qty-row">
+    ${priceEditRow}
+    <div class="qty-row" style="margin-top:8px;">
       <div class="qty-ctrl">
         <button class="qty-btn" onclick="changeQty(${i.id},-1,'${tonya}')">−</button>
         <div class="qty-input-wrap">
@@ -2109,6 +2140,18 @@ function itemCardHtml(i,tonya,showTonya){
     </div>
     ${caseBtns}
   </div>`;
+}
+
+function setSengyoPrice(id,val,tonya){
+  const t=tonya||curTonya;
+  const item=invData[t].find(i=>i.id==id);
+  if(item){
+    item.price=Math.max(0,parseFloat(val)||0);
+    saveData();
+    updateStats();
+    const tot=document.getElementById('tot-'+id);
+    if(tot)tot.textContent=item.price&&item.qty?'¥'+Math.round(item.price*item.qty).toLocaleString():'';
+  }
 }
 
 function escapeAttr(s){return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;');}
@@ -2226,7 +2269,13 @@ function resetAllQty(){
   if(!confirm(`最終確認：\n${curStore} の全数量をリセットしてよろしいですか？`))return;
   
   TONYAS.forEach(t=>{
-    (invData[t]||[]).forEach(i=>{i.qty=0;});
+    (invData[t]||[]).forEach(i=>{
+      i.qty=0;
+      if(isSengyo(t)){
+        const masterItem=(master[t]||[]).find(m=>m.name===i.name);
+        i.price=masterItem?(masterItem.price||0):0;
+      }
+    });
   });
   
   saveData();
